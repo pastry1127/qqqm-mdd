@@ -281,6 +281,10 @@
               <div class="mt-2 text-3xl font-extrabold text-white">74.1%</div>
               <p class="text-xs text-slate-400 mt-1">연간 발생 확률 (약 1.3년에 1회)</p>
               <div class="mt-3 pt-2.5 border-t border-slate-800 text-[11px] space-y-1 text-slate-300">
+                <div class="flex justify-between">
+                  <span>목표 매수가 (-10%):</span>
+                  <span id="regimeTarget10" class="font-bold text-amber-300">$282.71</span>
+                </div>
                 <div class="flex justify-between"><span>평균 하락폭:</span><span class="font-semibold text-amber-300">-14.2%</span></div>
                 <div class="flex justify-between"><span>전고점 회복:</span><span class="font-semibold">평균 3.8개월</span></div>
               </div>
@@ -295,6 +299,10 @@
               <div class="mt-2 text-3xl font-extrabold text-white">29.6%</div>
               <p class="text-xs text-slate-400 mt-1">연간 발생 확률 (약 3.4년에 1회)</p>
               <div class="mt-3 pt-2.5 border-t border-slate-800 text-[11px] space-y-1 text-slate-300">
+                <div class="flex justify-between">
+                  <span>목표 매수가 (-20%):</span>
+                  <span id="regimeTarget20" class="font-bold text-orange-300">$251.30</span>
+                </div>
                 <div class="flex justify-between"><span>평균 하락폭:</span><span class="font-semibold text-orange-300">-27.5%</span></div>
                 <div class="flex justify-between"><span>전고점 회복:</span><span class="font-semibold">평균 12.4개월</span></div>
               </div>
@@ -309,6 +317,10 @@
               <div class="mt-2 text-3xl font-extrabold text-white">14.8%</div>
               <p class="text-xs text-slate-400 mt-1">연간 발생 확률 (약 6.8년에 1회)</p>
               <div class="mt-3 pt-2.5 border-t border-slate-800 text-[11px] space-y-1 text-slate-300">
+                <div class="flex justify-between">
+                  <span>목표 매수가 (-30%):</span>
+                  <span id="regimeTarget30" class="font-bold text-rose-300">$219.88</span>
+                </div>
                 <div class="flex justify-between"><span>QQQ 최대 MDD:</span><span class="font-semibold text-rose-400">-82.9% (닷컴) / -35.6% ('22)</span></div>
                 <div class="flex justify-between"><span>전고점 회복:</span><span class="font-semibold">평균 24.0개월</span></div>
               </div>
@@ -554,7 +566,6 @@
         const nextDateObj = parseUtcDate(next.date);
         const diffDays = Math.round((nextDateObj - currDateObj) / (1000 * 60 * 60 * 24));
 
-        // 일봉 데이터가 이미 촘촘히 채워져 있는 경우(예: 1~3일 간격)는 그대로 유지
         if (diffDays <= 3) {
           expanded.push({
             date: curr.date,
@@ -564,7 +575,6 @@
           continue;
         }
 
-        // 중간 날짜가 비어 있으면 일 단위로 선형 보간하여 상세 추이 생성
         for (let step = 0; step < diffDays; step++) {
           const dObj = new Date(currDateObj.getTime() + step * 86400000);
           const dStr = formatUtcDate(dObj);
@@ -617,7 +627,6 @@
       box.classList.remove('hidden');
     }
 
-    // 연도 선택 드롭다운 초기화
     function populateYearSelectors(minYear, maxYear) {
       const startSel = document.getElementById('startYearSelect');
       const endSel = document.getElementById('endYearSelect');
@@ -640,7 +649,6 @@
       endSel.value = maxYear;
     }
 
-    // Google 스프레드시트 공개 CSV에서 A열 'VIX' 행의 B열 값을 정확히 파싱
     async function fetchVixFromGoogleSheet() {
       const vixBadge = document.getElementById('vixSourceBadge');
       vixBadge.innerText = '구글시트 동기화 중...';
@@ -700,7 +708,6 @@
         let extractedVix = null;
         let extractedDate = '';
 
-        // A열(index 0)에 'VIX' 문구가 있는 행을 찾아 B열(index 1) 값을 읽음
         for (let i = rows.length - 1; i >= 0; i--) {
           const colA = (rows[i][0] || '').replace(/^"|"$/g, '').trim();
           const colB = (rows[i][1] || '').replace(/^"|"$/g, '').trim();
@@ -735,7 +742,6 @@
       }
     }
 
-    // Twelve Data API에서 QQQM 실시간 + QQQ 1999년 상장일~현재 전체 매일 단위(1day) 시계열 가져오기
     async function fetchLiveMarketData() {
       const badge = document.getElementById('apiStatusBadge');
       const refreshBtn = document.getElementById('refreshBtn');
@@ -844,7 +850,6 @@
       }
     }
 
-    // 차트 기간 프리셋 버튼 클릭 (5년 / 10년 / 상장일~현재)
     function setChartPreset(mode) {
       document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('period-btn-active'));
       if (mode === '5y') document.getElementById('btnRange5y').classList.add('period-btn-active');
@@ -882,7 +887,6 @@
       renderFilteredQqqMdd(currentFilteredSeries);
     }
 
-    // 수동 연도 드롭다운 변경 시
     function applyManualYearRange() {
       document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('period-btn-active'));
 
@@ -906,7 +910,6 @@
       renderFilteredQqqMdd(currentFilteredSeries);
     }
 
-    // 일 단위 상세 포인트/툴팁 토글
     function toggleDailyDetailMode() {
       dailyDetailEnabled = !dailyDetailEnabled;
       const btn = document.getElementById('btnDailyDetail');
@@ -914,7 +917,6 @@
       renderFilteredQqqMdd(currentFilteredSeries);
     }
 
-    // 현재 보고 있는 구간에서 '오늘(가장 마지막 기준일)' 값 강조 토글
     function toggleFocusTodayInRange() {
       focusTodayEnabled = !focusTodayEnabled;
       const btn = document.getElementById('btnFocusToday');
@@ -922,7 +924,6 @@
       renderFilteredQqqMdd(currentFilteredSeries);
     }
 
-    // 선택된 기간 내 일 단위 MDD 계산 및 차트 업데이트
     function renderFilteredQqqMdd(series) {
       if (!series || series.length === 0) return;
 
@@ -1043,6 +1044,11 @@
       slider.value = price;
       document.getElementById('vixSlider').value = vix;
       document.getElementById('fgSlider').value = fg;
+
+      // 구간별 목표 매수가 업데이트 (10% 조정장, 20% 약세장, 30% 폭락장)
+      document.getElementById('regimeTarget10').innerText = `$${formatCommaNumber(ath * 0.90, 2)}`;
+      document.getElementById('regimeTarget20').innerText = `$${formatCommaNumber(ath * 0.80, 2)}`;
+      document.getElementById('regimeTarget30').innerText = `$${formatCommaNumber(ath * 0.70, 2)}`;
 
       const mddRatio = (price - ath) / ath;
       const mddPct = mddRatio * 100;
