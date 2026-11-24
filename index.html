@@ -43,6 +43,11 @@
       color: #ffffff !important;
       border-color: #fb7185 !important;
     }
+    .daily-detail-active {
+      background-color: #0d9488 !important;
+      color: #ffffff !important;
+      border-color: #2dd4bf !important;
+    }
   </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
@@ -354,18 +359,18 @@
         </p>
       </div>
 
-      <!-- 우측 5컬럼: QQQ 역사적 MDD 추이 차트 (기존 차트 레이아웃 유지) -->
+      <!-- 우측 5컬럼: QQQ 역사적 MDD 추이 차트 (기존 차트 레이아웃 유지 + 일 단위 상세 보기) -->
       <div class="card p-6 lg:col-span-5 flex flex-col justify-between">
         <div>
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 class="text-lg font-bold text-white">QQQ 역사적 MDD 추이 차트</h2>
-              <p class="text-[11px] text-slate-400 mt-0.5">매일 단위(YYYY-MM-DD) 상세 · Y축 10% / 20% / 30% 기준선</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">일 단위(YYYY-MM-DD) 상세 · Y축 10% / 20% / 30% 기준선</p>
             </div>
-            <span id="qqqChartStatus" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">1999~현재 매일 단위</span>
+            <span id="qqqChartStatus" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">1999~현재 일 단위</span>
           </div>
 
-          <!-- 기간 프리셋 버튼 (5년 / 10년 / 상장일~현재 + 현재 마커 버튼) & 수동 연도 범위 컨트롤 -->
+          <!-- 기간 프리셋 버튼 (5년 / 10년 / 상장일~현재 + 일 단위 상세 + 현재 마커 버튼) & 수동 연도 범위 컨트롤 -->
           <div class="mt-3 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
             <div class="flex flex-wrap items-center gap-1">
               <button id="btnRange5y" onclick="setChartPreset('5y')" class="period-btn px-2 py-1 text-[11px] font-bold rounded-md bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
@@ -376,6 +381,9 @@
               </button>
               <button id="btnRangeAll" onclick="setChartPreset('all')" class="period-btn period-btn-active px-2 py-1 text-[11px] font-bold rounded-md bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
                 상장일~현재
+              </button>
+              <button id="btnDailyDetail" onclick="toggleDailyDetailMode()" class="px-2 py-1 text-[11px] font-bold rounded-md bg-teal-950/60 text-teal-300 border border-teal-500/40 hover:bg-teal-900/60 transition">
+                일 단위 상세
               </button>
               <button id="btnFocusToday" onclick="toggleFocusTodayInRange()" class="px-2 py-1 text-[11px] font-bold rounded-md bg-rose-950/60 text-rose-300 border border-rose-500/40 hover:bg-rose-900/60 transition">
                 ● 현재
@@ -475,7 +483,9 @@
     let qqqMddChartInstance = null;
     let fullQqqRawSeries = [];
     let currentFilteredSeries = [];
+    let currentDetailedMetrics = [];
     let focusTodayEnabled = false;
+    let dailyDetailEnabled = false;
 
     // API 응답 전 또는 폴백용 QQQ 대표 일자별 샘플 데이터 (YYYY-MM-DD 형식)
     const fallbackQqqDailyRaw = [
@@ -505,6 +515,72 @@
       { date: '2026-01-15', high: 562.40, close: 560.10 },
       { date: '2026-11-24', high: 562.40, close: 537.09 }
     ];
+
+    // 비연속 날짜 배열을 일 단위(YYYY-MM-DD)로 보간하여 일별 상세 추이를 구성
+    function expandSeriesToDaily(series) {
+      if (!series || series.length === 0) return [];
+      const sorted = [...series].sort((a, b) => a.date.localeCompare(b.date));
+      const dailyMap = new Map();
+
+      sorted.forEach(item => {
+        dailyMap.set(item.date, {
+          date: item.date,
+          high: Number(item.high),
+          close: Number(item.close)
+        });
+      });
+
+      const expanded = [];
+      const parseUtcDate = (str) => {
+        const [y, m, d] = str.split('-').map(Number);
+        return new Date(Date.UTC(y, m - 1, d));
+      };
+      const formatUtcDate = (dt) => dt.toISOString().slice(0, 10);
+
+      for (let i = 0; i < sorted.length; i++) {
+        const curr = sorted[i];
+        const currDateObj = parseUtcDate(curr.date);
+
+        if (i === sorted.length - 1) {
+          expanded.push({
+            date: curr.date,
+            high: curr.high,
+            close: curr.close
+          });
+          break;
+        }
+
+        const next = sorted[i + 1];
+        const nextDateObj = parseUtcDate(next.date);
+        const diffDays = Math.round((nextDateObj - currDateObj) / (1000 * 60 * 60 * 24));
+
+        // 일봉 데이터가 이미 촘촘히 채워져 있는 경우(예: 1~3일 간격)는 그대로 유지
+        if (diffDays <= 3) {
+          expanded.push({
+            date: curr.date,
+            high: curr.high,
+            close: curr.close
+          });
+          continue;
+        }
+
+        // 중간 날짜가 비어 있으면 일 단위로 선형 보간하여 상세 추이 생성
+        for (let step = 0; step < diffDays; step++) {
+          const dObj = new Date(currDateObj.getTime() + step * 86400000);
+          const dStr = formatUtcDate(dObj);
+          const ratio = step / diffDays;
+          const interpHigh = curr.high + (next.high - curr.high) * ratio;
+          const interpClose = curr.close + (next.close - curr.close) * ratio;
+          expanded.push({
+            date: dStr,
+            high: parseFloat(interpHigh.toFixed(2)),
+            close: parseFloat(interpClose.toFixed(2))
+          });
+        }
+      }
+
+      return expanded;
+    }
 
     function formatCommaNumber(num, decimals = 0) {
       if (isNaN(num)) return '0';
@@ -741,7 +817,7 @@
           const lastYear = parseInt(fullQqqRawSeries[fullQqqRawSeries.length - 1].date.slice(0, 4), 10);
           populateYearSelectors(firstYear, lastYear);
           setChartPreset('all');
-          document.getElementById('qqqChartStatus').innerText = `QQQ 매일 단위 (${fullQqqRawSeries.length.toLocaleString()}일)`;
+          document.getElementById('qqqChartStatus').innerText = `QQQ 일 단위 (${fullQqqRawSeries.length.toLocaleString()}일)`;
           updatedItems.push(`QQQ 일봉(${fullQqqRawSeries.length.toLocaleString()}거래일)`);
         }
 
@@ -801,7 +877,8 @@
         document.getElementById('endYearSelect').value = lastYear;
       }
 
-      currentFilteredSeries = fullQqqRawSeries.filter(item => item.date >= cutoffDateStr);
+      const sliceSeries = fullQqqRawSeries.filter(item => item.date >= cutoffDateStr);
+      currentFilteredSeries = expandSeriesToDaily(sliceSeries);
       renderFilteredQqqMdd(currentFilteredSeries);
     }
 
@@ -820,11 +897,20 @@
         document.getElementById('endYearSelect').value = endYear;
       }
 
-      currentFilteredSeries = fullQqqRawSeries.filter(item => {
+      const sliceSeries = fullQqqRawSeries.filter(item => {
         const y = parseInt(item.date.slice(0, 4), 10);
         return y >= startYear && y <= endYear;
       });
 
+      currentFilteredSeries = expandSeriesToDaily(sliceSeries);
+      renderFilteredQqqMdd(currentFilteredSeries);
+    }
+
+    // 일 단위 상세 포인트/툴팁 토글
+    function toggleDailyDetailMode() {
+      dailyDetailEnabled = !dailyDetailEnabled;
+      const btn = document.getElementById('btnDailyDetail');
+      btn.classList.toggle('daily-detail-active', dailyDetailEnabled);
       renderFilteredQqqMdd(currentFilteredSeries);
     }
 
@@ -836,7 +922,7 @@
       renderFilteredQqqMdd(currentFilteredSeries);
     }
 
-    // 선택된 기간 내 매일 단위 MDD 계산 및 차트 업데이트
+    // 선택된 기간 내 일 단위 MDD 계산 및 차트 업데이트
     function renderFilteredQqqMdd(series) {
       if (!series || series.length === 0) return;
 
@@ -846,29 +932,41 @@
 
       const labels = [];
       const mddValues = [];
+      currentDetailedMetrics = [];
 
       series.forEach(item => {
         if (item.high > runningPeak) {
           runningPeak = item.high;
         }
         const dd = ((item.close - runningPeak) / runningPeak) * 100;
-        if (dd < maxMdd) {
-          maxMdd = dd;
+        const ddRounded = parseFloat(dd.toFixed(2));
+        if (ddRounded < maxMdd) {
+          maxMdd = ddRounded;
           maxMddDate = item.date;
         }
         labels.push(item.date);
-        mddValues.push(parseFloat(dd.toFixed(2)));
+        mddValues.push(ddRounded);
+        currentDetailedMetrics.push({
+          date: item.date,
+          close: item.close,
+          peak: runningPeak,
+          mdd: ddRounded
+        });
       });
 
       const lastIdx = mddValues.length - 1;
       const todayMdd = mddValues[lastIdx];
       const todayDate = labels[lastIdx];
 
-      const pointRadii = new Array(mddValues.length).fill(0);
-      const pointColors = new Array(mddValues.length).fill('transparent');
+      const showDailyPoints = dailyDetailEnabled && mddValues.length <= 450;
+      const pointRadii = new Array(mddValues.length).fill(showDailyPoints ? 2.2 : 0);
+      const pointColors = new Array(mddValues.length).fill(showDailyPoints ? '#fb7185' : 'transparent');
+      const pointBorders = new Array(mddValues.length).fill(0);
+
       if (focusTodayEnabled && lastIdx >= 0) {
         pointRadii[lastIdx] = 6;
         pointColors[lastIdx] = '#38bdf8';
+        pointBorders[lastIdx] = 2;
       }
 
       const minFloor = Math.min(-30, Math.floor(maxMdd / 10) * 10);
@@ -880,12 +978,13 @@
         qqqMddChartInstance.data.datasets[0].pointHoverRadius = 6;
         qqqMddChartInstance.data.datasets[0].pointBackgroundColor = pointColors;
         qqqMddChartInstance.data.datasets[0].pointBorderColor = '#ffffff';
-        qqqMddChartInstance.data.datasets[0].pointBorderWidth = focusTodayEnabled ? 2 : 0;
+        qqqMddChartInstance.data.datasets[0].pointBorderWidth = pointBorders;
 
         qqqMddChartInstance.data.datasets[1].data = new Array(labels.length).fill(-10);
         qqqMddChartInstance.data.datasets[2].data = new Array(labels.length).fill(-20);
         qqqMddChartInstance.data.datasets[3].data = new Array(labels.length).fill(-30);
         qqqMddChartInstance.options.scales.y.min = minFloor;
+        qqqMddChartInstance.options.scales.x.ticks.maxTicksLimit = dailyDetailEnabled ? 12 : 7;
 
         qqqMddChartInstance.update();
 
@@ -899,9 +998,10 @@
         }
       }
 
+      document.getElementById('qqqChartStatus').innerText = `QQQ 일 단위 (${series.length.toLocaleString()}일)`;
       document.getElementById('rangeTodayMddText').innerText = `${todayMdd.toFixed(2)}% (${todayDate})`;
       document.getElementById('rangeMaxMddText').innerText = `${maxMdd.toFixed(2)}% (${maxMddDate})`;
-      document.getElementById('rangeDateSpanText').innerText = `${series[0].date} ~ ${todayDate} (${series.length.toLocaleString()}일)`;
+      document.getElementById('rangeDateSpanText').innerText = `${series[0].date} ~ ${todayDate} (일 단위 ${series.length.toLocaleString()}일)`;
     }
 
     function syncSliderToPrice(val) {
@@ -1183,9 +1283,16 @@
             },
             tooltip: {
               callbacks: {
-                title: (items) => `기준일 (매일): ${items[0].label}`,
+                title: (items) => `기준일 (일 단위): ${items[0].label}`,
                 label: (ctx) => {
                   if (ctx.datasetIndex === 0) {
+                    const info = currentDetailedMetrics[ctx.dataIndex];
+                    if (info) {
+                      return [
+                        `QQQ MDD: ${info.mdd.toFixed(2)}%`,
+                        `종가: $${formatCommaNumber(info.close, 2)} (전고점: $${formatCommaNumber(info.peak, 2)})`
+                      ];
+                    }
                     return `QQQ MDD: ${ctx.parsed.y.toFixed(2)}%`;
                   }
                   return null;
