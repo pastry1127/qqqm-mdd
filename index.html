@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QQQM MDD 실시간 추가매수 & QQQ 역사적 MDD 대시보드</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0b0f19;
+      color: #e2e8f0;
+    }
+    .card {
+      background: linear-gradient(145deg, #131a2a 0%, #0f1522 100%);
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+    .input-box {
+      background-color: #090d16;
+      border: 1px solid #2a374f;
+      color: #f8fafc;
+      transition: all 0.2s;
+    }
+    .input-box:focus {
+      outline: none;
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+    input[type="range"] {
+      accent-color: #38bdf8;
+    }
+    .period-btn-active {
+      background-color: #0284c7 !important;
+      color: #ffffff !important;
+      border-color: #38bdf8 !important;
+    }
+    .current-pin-active {
+      background-color: #e11d48 !important;
+      color: #ffffff !important;
+      border-color: #fb7185 !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+  <div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- 헤더 & 실시간 연동 상태바 -->
+    <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-800 pb-5">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="px-2.5 py-1 text-xs font-bold bg-sky-500/20 text-sky-400 rounded-md border border-sky-500/30">NASDAQ 100 · QQQM / QQQ</span>
+          <span id="apiStatusBadge" class="px-2.5 py-1 text-xs font-semibold bg-amber-500/20 text-amber-300 rounded-md border border-amber-500/30">
+            ⏳ Twelve Data & 구글시트 연결 중...
+          </span>
+        </div>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-white mt-2 tracking-tight">
+          QQQM 실시간 MDD 추가매수 & 시장심리 대시보드
+        </h1>
+        <p id="lastUpdatedText" class="text-slate-400 text-xs mt-1">
+          마지막 동기화: 불러오는 중...
+        </p>
+      </div>
+
+      <!-- 컨트롤 버튼 그룹 -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="fetchLiveMarketData()" id="refreshBtn" class="px-4 py-2 text-xs font-bold rounded-lg bg-sky-600 hover:bg-sky-500 text-white transition flex items-center gap-1.5 shadow-lg shadow-sky-900/30">
+          <span>🔄</span> 실시간 API · 시트 갱신
+        </button>
+        <div class="h-5 w-[1px] bg-slate-700 mx-1 hidden sm:block"></div>
+        <button onclick="applyPreset(314.12, 282.70, 22.5, 38)" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition">
+          시뮬레이션: -10% 조정
+        </button>
+        <button onclick="applyPreset(314.12, 251.23, 35.08, 12)" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-orange-400 border border-slate-700 transition">
+          시뮬레이션: -20% 약세
+        </button>
+        <button onclick="applyPreset(314.12, 219.88, 46.5, 6)" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 transition">
+          시뮬레이션: -30% 폭락
+        </button>
+      </div>
+    </header>
+
+    <!-- API 알림 메시지 박스 -->
+    <div id="apiAlertBox" class="hidden p-3.5 rounded-xl bg-slate-900/90 border border-slate-700 text-xs text-slate-300 flex items-center justify-between gap-3">
+      <span id="apiAlertMsg"></span>
+      <button onclick="document.getElementById('apiAlertBox').classList.add('hidden')" class="text-slate-400 hover:text-white font-bold">닫기</button>
+    </div>
+
+    <!-- 상단 입력 컨트롤 패널 -->
+    <section class="card p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-sky-400"></span> 실시간 데이터 및 시뮬레이션 입력
+        </h2>
+        <span class="text-xs text-slate-400">Twelve Data API 및 구글 스프레드시트 CSV에서 자동 반영되며, 직접 수정도 가능합니다.</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- QQQM 전고점 -->
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs text-slate-400">QQQM 역대 최고가 ($)</label>
+            <span id="athDateLabel" class="text-[10px] text-sky-400">ATH 조회중</span>
+          </div>
+          <input type="number" id="athInput" step="0.01" value="314.12" oninput="recalculateAll()" class="input-box w-full px-3 py-2 rounded-lg text-base font-bold" />
+          <p class="text-[11px] text-slate-500 mt-1">Twelve Data QQQM 최고가</p>
+        </div>
+
+        <!-- QQQM 현재가 -->
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs text-slate-400">QQQM 현재가 ($)</label>
+            <span id="priceChangeLabel" class="text-[10px] text-slate-400">-</span>
+          </div>
+          <input type="number" id="priceInput" step="0.01" value="251.23" oninput="recalculateAll()" class="input-box w-full px-3 py-2 rounded-lg text-base font-bold text-sky-300" />
+          <input type="range" id="priceSlider" min="150" max="400" step="0.5" value="251.23" oninput="syncSliderToPrice(this.value)" class="w-full mt-2 cursor-pointer" />
+        </div>
+
+        <!-- VIX 지수 (구글 스프레드시트 CSV 연동) -->
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs text-slate-400">CBOE VIX 지수</label>
+            <span id="vixSourceBadge" class="text-[10px] text-amber-300">구글시트 조회중</span>
+          </div>
+          <input type="number" id="vixInput" step="0.01" value="22.50" oninput="recalculateAll()" class="input-box w-full px-3 py-2 rounded-lg text-base font-bold text-amber-300" />
+          <input type="range" id="vixSlider" min="10" max="65" step="0.5" value="22.50" oninput="syncSliderToVix(this.value)" class="w-full mt-2 cursor-pointer" />
+        </div>
+
+        <!-- CNN 공포탐욕지수 -->
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs text-slate-400">CNN 공포·탐욕 (0~100)</label>
+            <a href="https://edition.cnn.com/markets/fear-and-greed" target="_blank" rel="noopener noreferrer" class="text-[10px] text-sky-400 hover:underline">CNN 확인 ↗</a>
+          </div>
+          <input type="number" id="fgInput" min="0" max="100" step="1" value="35" oninput="recalculateAll()" class="input-box w-full px-3 py-2 rounded-lg text-base font-bold text-rose-400" />
+          <input type="range" id="fgSlider" min="0" max="100" step="1" value="35" oninput="syncSliderToFg(this.value)" class="w-full mt-2 cursor-pointer" />
+        </div>
+
+        <!-- 추가매수 총 시드머니 -->
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+          <label class="block text-xs text-slate-400 mb-1">대기 시드머니 ($)</label>
+          <input type="number" id="seedInput" step="100" value="10000" oninput="recalculateAll()" class="input-box w-full px-3 py-2 rounded-lg text-base font-bold text-emerald-400" />
+          <p class="text-[11px] text-slate-500 mt-1">구간별 분할매수 예산</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4대 핵심 지표 카드 -->
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <!-- 1. QQQM MDD 카드 -->
+      <div class="card p-5 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400">QQQM 현재 MDD</span>
+            <span id="mddBadge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500/20 text-rose-400">약세장 진입</span>
+          </div>
+          <div class="mt-3 flex items-baseline gap-2">
+            <span id="mddValue" class="text-4xl font-extrabold text-rose-400">-20.02%</span>
+            <span id="mddDropDollar" class="text-xs text-slate-400">(-$62.89)</span>
+          </div>
+          <p id="mddSubtext" class="text-xs text-slate-400 mt-2">전고점 회복까지 <strong class="text-white">+25.03%</strong> 상승 필요</p>
+        </div>
+        <div class="mt-4">
+          <div class="flex justify-between text-[11px] text-slate-500 mb-1">
+            <span>0% (고점)</span>
+            <span>-10%</span>
+            <span>-20%</span>
+            <span>-35%+</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+            <div id="mddBar" class="h-full bg-gradient-to-r from-amber-400 via-orange-500 to-rose-600 transition-all duration-300" style="width: 57%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. VIX 변동성 지수 카드 -->
+      <div class="card p-5 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400">CBOE VIX (구글시트 연동)</span>
+            <span id="vixBadge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 text-orange-400">높은 공포</span>
+          </div>
+          <div class="mt-3 flex items-baseline gap-2">
+            <span id="vixValue" class="text-4xl font-extrabold text-amber-300">22.50</span>
+            <span class="text-xs text-slate-400">pt</span>
+          </div>
+          <p id="vixDesc" class="text-xs text-slate-400 mt-2">평균(19.5) 상회 · 분할매수 우호 구간</p>
+        </div>
+        <div class="mt-4">
+          <div class="flex justify-between text-[11px] text-slate-500 mb-1">
+            <span>12 (안정)</span>
+            <span>20 (경계)</span>
+            <span>30 (공포)</span>
+            <span>40+ (패닉)</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+            <div id="vixBar" class="h-full bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500 transition-all duration-300" style="width: 45%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. CNN 공포·탐욕 지수 카드 -->
+      <div class="card p-5 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-400">CNN 공포·탐욕 지수</span>
+            <span id="fgBadge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500/20 text-rose-400">공포 (Fear)</span>
+          </div>
+          <div class="mt-3 flex items-baseline gap-2">
+            <span id="fgValue" class="text-4xl font-extrabold text-rose-400">35</span>
+            <span class="text-xs text-slate-400">/ 100</span>
+          </div>
+          <p id="fgDesc" class="text-xs text-slate-400 mt-2">25 이하 극단적 공포 진입 시 적극 매수 구간</p>
+        </div>
+        <div class="mt-4">
+          <div class="flex justify-between text-[11px] text-slate-500 mb-1">
+            <span>0 (극단공포)</span>
+            <span>25</span>
+            <span>50 (중립)</span>
+            <span>75+ (탐욕)</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+            <div id="fgBar" class="h-full bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400 transition-all duration-300" style="width: 35%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. 종합 추가매수 매력도 점수 카드 -->
+      <div class="card p-5 flex flex-col justify-between border-sky-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950/30">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-sky-300">종합 추가매수 시그널</span>
+            <span id="signalTag" class="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-300">분할매수 구간</span>
+          </div>
+          <div class="mt-3 flex items-baseline gap-2">
+            <span id="buyScoreValue" class="text-4xl font-extrabold text-white">68</span>
+            <span class="text-xs text-slate-400">/ 100점</span>
+          </div>
+          <p id="signalActionText" class="text-xs text-slate-300 mt-2 leading-relaxed">
+            MDD·VIX·심리지표 종합 결과, 계획된 비중대로 분할 매수를 집행하기 유리한 구간입니다.
+          </p>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-xs">
+          <span class="text-slate-400">권장 현금 투입률</span>
+          <span id="recommendedDeploy" class="font-bold text-emerald-400">시드의 45%</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 중단: QQQ 장기 역사적 하락장 확률 통계 + QQQ 역사적 MDD 추이 차트 -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- 좌측 7컬럼: QQQ (1999~현재) 기반 10% 조정장 / 20% 약세장 / 30% 폭락장 확률 데이터 -->
+      <div class="card p-6 lg:col-span-7 flex flex-col justify-between">
+        <div>
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+            <div>
+              <h2 class="text-lg font-bold text-white">QQQ 장기 역사적 하락장 구간별 확률 데이터</h2>
+              <p class="text-xs text-slate-400 mt-0.5">QQQM의 짧은 상장 기간(2020~)을 보완하기 위한 동일 지수 QQQ(1999년 상장~) 장기 통계</p>
+            </div>
+            <span class="text-xs px-2.5 py-1 rounded bg-sky-500/10 text-sky-300 border border-sky-500/30 self-start font-semibold">
+              QQQ 27년+ 데이터 기준
+            </span>
+          </div>
+
+          <!-- 3대 하락장 확률 카드 -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+            <!-- 10% 조정장 -->
+            <div id="regimeCard10" class="p-4 rounded-xl bg-slate-900/80 border border-amber-500/30 transition-all">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-amber-400">10% 조정장</span>
+                <span class="text-[11px] text-slate-400">MDD -10% 이상</span>
+              </div>
+              <div class="mt-2 text-3xl font-extrabold text-white">74.1%</div>
+              <p class="text-xs text-slate-400 mt-1">연간 발생 확률 (약 1.3년에 1회)</p>
+              <div class="mt-3 pt-2.5 border-t border-slate-800 text-[11px] space-y-1 text-slate-300">
+                <div class="flex justify-between"><span>평균 하락폭:</span><span class="font-semibold text-amber-300">-14.2%</span></div>
+                <div class="flex justify-between"><span>전고점 회복:</span><span class="font-semibold">평균 3.8개월</span></div>
+              </div>
+            </div>
+
+            <!-- 20% 약세장 -->
+            <div id="regimeCard20" class="p-4 rounded-xl bg-slate-900/80 border border-orange-500/30 transition-all">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-orange-400">20% 약세장</span>
+                <span class="text-[11px] text-slate-400">MDD -20% 이상</span>
+              </div>
+              <div class="mt-2 text-3xl font-extrabold text-white">29.6%</div>
+              <p class="text-xs text-slate-400 mt-1">연간 발생 확률 (약 3.4년에 1회)</p>
+              <div class="mt-3 pt-2.5 border-t border-slate-800 text-[11px] space-y-1 text-slate-300">
+                <div class="flex justify-between"><span>평균 하락폭:</span><span class="font-semibold text-orange-300">-27.5%</span></div>
+                <div class="flex justify-between"><span>전고점 회복:</span><span class="font-semibold">평균 12.4개월</span></div>
+              </div>
+            </div>
+
+            <!-- 30% 폭락장 -->
+            <div id="regimeCard30" class="p-4 rounded-xl bg-slate-900/80 border border-rose-500/30 transition-all">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-rose-400">30% 폭락장</span>
+                <span class="text-[11px] text-slate-400">MDD -30% 이상</span>
+              </div>
+              <div class="mt-2 text-3xl font-extrabold text-white">14.8%</div>
+              <p class="text-xs text-slate-400 mt-1">연간 발생 확률 (약 6.8년에 1회)</p>
+              <div class="mt-3 pt-2.5 border-t border-slate-800 text-[11px] space-y-1 text-slate-300">
+                <div class="flex justify-between"><span>QQQ 최대 MDD:</span><span class="font-semibold text-rose-400">-82.9% (닷컴) / -35.6% ('22)</span></div>
+                <div class="flex justify-between"><span>전고점 회복:</span><span class="font-semibold">평균 24.0개월</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 조건부 심화 확률 테이블 -->
+          <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-900 text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="py-2.5 px-3.5">QQQ 하락 구간 기준</th>
+                  <th class="py-2.5 px-3.5">연간 발생 빈도</th>
+                  <th class="py-2.5 px-3.5">다음 단계 심화 확률</th>
+                  <th class="py-2.5 px-3.5">평균 VIX 구간</th>
+                  <th class="py-2.5 px-3.5">향후 1년 평균 반등률</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/80 bg-slate-950/40">
+                <tr>
+                  <td class="py-2.5 px-3.5 font-semibold text-amber-300">-10% 조정장 진입 시</td>
+                  <td class="py-2.5 px-3.5">74.1%</td>
+                  <td class="py-2.5 px-3.5 text-slate-300">-20% 약세장으로 심화: <strong class="text-white">40.0%</strong></td>
+                  <td class="py-2.5 px-3.5">22 ~ 28</td>
+                  <td class="py-2.5 px-3.5 text-emerald-400 font-bold">+21.8%</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 px-3.5 font-semibold text-orange-400">-20% 약세장 진입 시</td>
+                  <td class="py-2.5 px-3.5">29.6%</td>
+                  <td class="py-2.5 px-3.5 text-slate-300">-30% 폭락장으로 심화: <strong class="text-white">50.0%</strong></td>
+                  <td class="py-2.5 px-3.5">30 ~ 38</td>
+                  <td class="py-2.5 px-3.5 text-emerald-400 font-bold">+35.2%</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 px-3.5 font-semibold text-rose-400">-30% 폭락장 진입 시</td>
+                  <td class="py-2.5 px-3.5">14.8%</td>
+                  <td class="py-2.5 px-3.5 text-slate-300">-35% 이상 심화: <strong class="text-white">42.5%</strong></td>
+                  <td class="py-2.5 px-3.5">38 ~ 55+</td>
+                  <td class="py-2.5 px-3.5 text-emerald-400 font-bold">+49.1%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <p class="text-[11px] text-slate-500 mt-3">
+          * QQQM과 QQQ는 모두 동일한 나스닥 100 지수를 추종하므로 장기 변동성과 MDD 패턴이 동일합니다.
+        </p>
+      </div>
+
+      <!-- 우측 5컬럼: QQQ 역사적 MDD 추이 차트 -->
+      <div class="card p-6 lg:col-span-5 flex flex-col justify-between">
+        <div>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-lg font-bold text-white">QQQ 역사적 MDD 추이 차트</h2>
+              <p class="text-[11px] text-slate-400 mt-0.5">매일 단위(YYYY-MM-DD) 상세 · Y축 10% / 20% / 30% 기준선</p>
+            </div>
+            <span id="qqqChartStatus" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">1999~현재 매일 단위</span>
+          </div>
+
+          <!-- 기간 프리셋 버튼 (5년 / 10년 / 상장일~현재 + 현재 마커 버튼) & 수동 연도 범위 컨트롤 -->
+          <div class="mt-3 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-1">
+              <button id="btnRange5y" onclick="setChartPreset('5y')" class="period-btn px-2 py-1 text-[11px] font-bold rounded-md bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
+                5년
+              </button>
+              <button id="btnRange10y" onclick="setChartPreset('10y')" class="period-btn px-2 py-1 text-[11px] font-bold rounded-md bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
+                10년
+              </button>
+              <button id="btnRangeAll" onclick="setChartPreset('all')" class="period-btn period-btn-active px-2 py-1 text-[11px] font-bold rounded-md bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
+                상장일~현재
+              </button>
+              <button id="btnFocusToday" onclick="toggleFocusTodayInRange()" class="px-2 py-1 text-[11px] font-bold rounded-md bg-rose-950/60 text-rose-300 border border-rose-500/40 hover:bg-rose-900/60 transition">
+                ● 현재
+              </button>
+            </div>
+
+            <!-- 수동 연도 선택 -->
+            <div class="flex items-center gap-1 text-[11px]">
+              <select id="startYearSelect" onchange="applyManualYearRange()" class="input-box px-1.5 py-1 rounded text-[11px] font-semibold cursor-pointer"></select>
+              <span class="text-slate-500">~</span>
+              <select id="endYearSelect" onchange="applyManualYearRange()" class="input-box px-1.5 py-1 rounded text-[11px] font-semibold cursor-pointer"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative h-64 w-full my-3">
+          <canvas id="qqqMddHistoryChart"></canvas>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <span class="text-slate-400">오늘(최신) MDD: </span>
+            <strong id="rangeTodayMddText" class="text-sky-400">-4.50%</strong>
+            <span class="text-slate-600 mx-1.5">|</span>
+            <span class="text-slate-400">구간 최대: </span>
+            <strong id="rangeMaxMddText" class="text-rose-400">-82.96%</strong>
+          </div>
+          <div class="text-[11px] text-slate-400" id="rangeDateSpanText">1999-03-10 ~ 현재</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 하단: QQQM MDD 구간별 분할매수 실행 테이블 -->
+    <section class="card p-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-white">QQQM MDD 구간별 추가매수 실행 계산기</h2>
+          <p class="text-xs text-slate-400 mt-0.5">현재가 및 전고점 기준으로 목표 매수가 도달 시 <span class="text-emerald-400 font-semibold">초록색 활성 표시</span>가 됩니다.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-4 text-xs bg-slate-900 px-4 py-2.5 rounded-xl border border-slate-800">
+          <div>
+            <span class="text-slate-400">도달 구간 누적 투입금: </span>
+            <strong id="totalTriggeredCash" class="text-emerald-400 text-sm">$0</strong>
+          </div>
+          <div class="h-4 w-[1px] bg-slate-700"></div>
+          <div>
+            <span class="text-slate-400">예상 매수 수량: </span>
+            <strong id="totalTriggeredShares" class="text-sky-400 text-sm">0주</strong>
+          </div>
+          <div class="h-4 w-[1px] bg-slate-700"></div>
+          <div>
+            <span class="text-slate-400">예상 평균단가: </span>
+            <strong id="avgBuyPrice" class="text-white text-sm">$0.00</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-slate-800">
+        <table class="w-full text-left text-xs md:text-sm">
+          <thead class="bg-slate-900 text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="py-3 px-4">구간 단계</th>
+              <th class="py-3 px-4">목표 MDD</th>
+              <th class="py-3 px-4">목표 매수가 ($)</th>
+              <th class="py-3 px-4">현재가 대비</th>
+              <th class="py-3 px-4">시드 배분 비중</th>
+              <th class="py-3 px-4">투입 금액 ($)</th>
+              <th class="py-3 px-4">매수 수량 (주)</th>
+              <th class="py-3 px-4">현재 상태</th>
+            </tr>
+          </thead>
+          <tbody id="dcaTableBody" class="divide-y divide-slate-800/80">
+            <!-- JS로 동적 생성 -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // 제공된 Twelve Data API 키
+    const TWELVE_DATA_API_KEY = '2dc4a4e26ecd432491177ee79b25a84a';
+    // 제공된 Google 스프레드시트 공개 CSV URL (VIX 지수 연동)
+    const GOOGLE_SHEET_VIX_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTsfWHfBBs2owjyhb8FWBRAN3wMN_93WAulOu6mJpDrPubgAakHFJzGS7nTkbi-JmMMbxlycIeQUbFf/pub?gid=1655940963&single=true&output=csv';
+
+    // 6단계 분할매수 기본 설계
+    const dcaTiers = [
+      { name: '1차 (조정 진입)', drop: 0.10, weight: 0.10 },
+      { name: '2차 (조정 심화)', drop: 0.15, weight: 0.15 },
+      { name: '3차 (약세장 진입)', drop: 0.20, weight: 0.20 },
+      { name: '4차 (약세장 중반)', drop: 0.25, weight: 0.20 },
+      { name: '5차 (폭락장 진입)', drop: 0.30, weight: 0.20 },
+      { name: '6차 (역대급 패닉)', drop: 0.35, weight: 0.15 }
+    ];
+
+    let qqqMddChartInstance = null;
+    let fullQqqRawSeries = [];
+    let currentFilteredSeries = [];
+    let focusTodayEnabled = false;
+
+    // API 응답 전 또는 폴백용 QQQ 대표 일자별 샘플 데이터 (YYYY-MM-DD 형식)
+    const fallbackQqqDailyRaw = [
+      { date: '1999-03-10', high: 51.06, close: 51.06 },
+      { date: '2000-03-24', high: 120.50, close: 118.00 },
+      { date: '2000-12-20', high: 60.00, close: 57.36 },
+      { date: '2001-09-21', high: 36.00, close: 33.98 },
+      { date: '2002-10-09', high: 21.20, close: 20.53 },
+      { date: '2003-12-31', high: 36.80, close: 36.46 },
+      { date: '2007-10-31', high: 55.07, close: 54.82 },
+      { date: '2008-11-20', high: 26.80, close: 25.05 },
+      { date: '2009-03-09', high: 26.20, close: 25.74 },
+      { date: '2011-08-19', high: 52.10, close: 50.85 },
+      { date: '2014-12-29', high: 106.14, close: 105.60 },
+      { date: '2016-02-11', high: 97.50, close: 96.32 },
+      { date: '2018-08-30', high: 187.52, close: 186.74 },
+      { date: '2018-12-24', high: 147.20, close: 144.76 },
+      { date: '2020-02-19', high: 237.47, close: 236.98 },
+      { date: '2020-03-23', high: 174.50, close: 169.30 },
+      { date: '2021-11-22', high: 408.71, close: 403.99 },
+      { date: '2022-10-13', high: 269.00, close: 263.21 },
+      { date: '2023-07-19', high: 387.98, close: 385.74 },
+      { date: '2024-07-10', high: 503.52, close: 502.96 },
+      { date: '2024-08-05', high: 442.00, close: 435.37 },
+      { date: '2025-02-19', high: 540.81, close: 539.52 },
+      { date: '2025-04-08', high: 448.00, close: 440.15 },
+      { date: '2026-01-15', high: 562.40, close: 560.10 },
+      { date: '2026-11-24', high: 562.40, close: 537.09 }
+    ];
+
+    function showAlert(msg) {
+      const box = document.getElementById('apiAlertBox');
+      document.getElementById('apiAlertMsg').innerHTML = msg;
+      box.classList.remove('hidden');
+    }
+
+    // 연도 선택 드롭다운 초기화
+    function populateYearSelectors(minYear, maxYear) {
+      const startSel = document.getElementById('startYearSelect');
+      const endSel = document.getElementById('endYearSelect');
+      startSel.innerHTML = '';
+      endSel.innerHTML = '';
+
+      for (let y = minYear; y <= maxYear; y++) {
+        const opt1 = document.createElement('option');
+        opt1.value = y;
+        opt1.text = `${y}년`;
+        startSel.appendChild(opt1);
+
+        const opt2 = document.createElement('option');
+        opt2.value = y;
+        opt2.text = `${y}년`;
+        endSel.appendChild(opt2);
+      }
+
+      startSel.value = minYear;
+      endSel.value = maxYear;
+    }
+
+    // Google 스프레드시트 공개 CSV에서 VIX 지수 파싱
+    async function fetchVixFromGoogleSheet() {
+      const vixBadge = document.getElementById('vixSourceBadge');
+      vixBadge.innerText = '구글시트 동기화 중...';
+      vixBadge.className = 'text-[10px] text-amber-300';
+
+      const cacheBusterUrl = `${GOOGLE_SHEET_VIX_CSV_URL}&t=${Date.now()}`;
+
+      const tryFetchCsv = async (url) => {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.text();
+      };
+
+      try {
+        let csvText = '';
+        try {
+          csvText = await tryFetchCsv(cacheBusterUrl);
+        } catch (directErr) {
+          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(cacheBusterUrl)}`;
+          csvText = await tryFetchCsv(proxyUrl);
+        }
+
+        const lines = csvText
+          .split(/\r?\n/)
+          .map(line => line.trim())
+          .filter(line => line.length > 0);
+
+        let extractedVix = null;
+        let extractedDate = '';
+
+        for (let i = lines.length - 1; i >= 0; i--) {
+          const cells = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
+          for (let j = cells.length - 1; j >= 0; j--) {
+            const cleaned = cells[j].replace(/[^0-9.-]/g, '');
+            const num = parseFloat(cleaned);
+            if (!isNaN(num) && num > 5 && num < 150 && !/^\d{4}$/.test(cells[j])) {
+              extractedVix = num;
+              const dateCell = cells.find(c => /\d{4}[-./]\d{1,2}[-./]\d{1,2}/.test(c));
+              if (dateCell) extractedDate = dateCell;
+              break;
+            }
+          }
+          if (extractedVix !== null) break;
+        }
+
+        if (extractedVix !== null) {
+          document.getElementById('vixInput').value = extractedVix.toFixed(2);
+          document.getElementById('vixSlider').value = extractedVix.toFixed(2);
+          vixBadge.innerText = extractedDate ? `시트 연동 (${extractedDate})` : '구글시트 실시간 반영';
+          vixBadge.className = 'text-[10px] text-emerald-400 font-semibold';
+          return `VIX(${extractedVix.toFixed(2)})`;
+        } else {
+          throw new Error('CSV에서 유효한 VIX 수치를 찾지 못했습니다.');
+        }
+      } catch (err) {
+        console.warn('구글 시트 VIX 연동 실패:', err);
+        vixBadge.innerText = '시트 로드 실패 (수동 입력)';
+        vixBadge.className = 'text-[10px] text-rose-400';
+        return null;
+      }
+    }
+
+    // Twelve Data API에서 QQQM 실시간 + QQQ 1999년 상장일~현재 전체 매일 단위(1day) 시계열 가져오기
+    async function fetchLiveMarketData() {
+      const badge = document.getElementById('apiStatusBadge');
+      const refreshBtn = document.getElementById('refreshBtn');
+      badge.className = 'px-2.5 py-1 text-xs font-semibold bg-amber-500/20 text-amber-300 rounded-md border border-amber-500/30';
+      badge.innerText = '⏳ 실시간 시세 · 일봉 · 구글시트 동기화 중...';
+      refreshBtn.disabled = true;
+      refreshBtn.classList.add('opacity-60');
+
+      try {
+        const quoteUrl = `https://api.twelvedata.com/quote?symbol=QQQM&apikey=${TWELVE_DATA_API_KEY}`;
+        const qqqmAthUrl = `https://api.twelvedata.com/time_series?symbol=QQQM&interval=1month&outputsize=120&apikey=${TWELVE_DATA_API_KEY}`;
+        const qqqDailyRecentUrl = `https://api.twelvedata.com/time_series?symbol=QQQ&interval=1day&outputsize=5000&apikey=${TWELVE_DATA_API_KEY}`;
+        const qqqDailyEarlyUrl = `https://api.twelvedata.com/time_series?symbol=QQQ&interval=1day&start_date=1999-03-10&end_date=2007-06-01&outputsize=5000&apikey=${TWELVE_DATA_API_KEY}`;
+
+        const [quoteRes, qqqmAthRes, qqqRecentRes, qqqEarlyRes, vixResultText] = await Promise.all([
+          fetch(quoteUrl).then(r => r.json()),
+          fetch(qqqmAthUrl).then(r => r.json()),
+          fetch(qqqDailyRecentUrl).then(r => r.json()),
+          fetch(qqqDailyEarlyUrl).then(r => r.json()),
+          fetchVixFromGoogleSheet()
+        ]);
+
+        let updatedItems = [];
+
+        if (quoteRes && quoteRes.close) {
+          const livePrice = parseFloat(quoteRes.close);
+          const pctChange = parseFloat(quoteRes.percent_change || 0);
+          document.getElementById('priceInput').value = livePrice.toFixed(2);
+          document.getElementById('priceSlider').value = livePrice.toFixed(2);
+          
+          const changeEl = document.getElementById('priceChangeLabel');
+          changeEl.innerText = `${pctChange >= 0 ? '+' : ''}${pctChange.toFixed(2)}%`;
+          changeEl.className = `text-[10px] font-bold ${pctChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+          updatedItems.push(`QQQM 현재가($${livePrice.toFixed(2)})`);
+        }
+
+        if (qqqmAthRes && Array.isArray(qqqmAthRes.values) && qqqmAthRes.values.length > 0) {
+          let maxHigh = 0;
+          let maxDate = '';
+          qqqmAthRes.values.forEach(candle => {
+            const h = parseFloat(candle.high);
+            if (!isNaN(h) && h > maxHigh) {
+              maxHigh = h;
+              maxDate = candle.datetime;
+            }
+          });
+          if (quoteRes && quoteRes.high && parseFloat(quoteRes.high) > maxHigh) {
+            maxHigh = parseFloat(quoteRes.high);
+            maxDate = quoteRes.datetime || '최근';
+          }
+          if (maxHigh > 0) {
+            document.getElementById('athInput').value = maxHigh.toFixed(2);
+            document.getElementById('athDateLabel').innerText = `고점일: ${maxDate}`;
+            updatedItems.push(`QQQM 전고점($${maxHigh.toFixed(2)})`);
+          }
+        }
+
+        const combinedMap = new Map();
+        const ingestDailyValues = (resObj) => {
+          if (resObj && Array.isArray(resObj.values)) {
+            resObj.values.forEach(item => {
+              const dateKey = item.datetime.slice(0, 10);
+              const highVal = parseFloat(item.high);
+              const closeVal = parseFloat(item.close);
+              if (!isNaN(highVal) && !isNaN(closeVal)) {
+                combinedMap.set(dateKey, { date: dateKey, high: highVal, close: closeVal });
+              }
+            });
+          }
+        };
+
+        ingestDailyValues(qqqEarlyRes);
+        ingestDailyValues(qqqRecentRes);
+
+        if (combinedMap.size > 0) {
+          fullQqqRawSeries = Array.from(combinedMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+
+          const firstYear = parseInt(fullQqqRawSeries[0].date.slice(0, 4), 10);
+          const lastYear = parseInt(fullQqqRawSeries[fullQqqRawSeries.length - 1].date.slice(0, 4), 10);
+          populateYearSelectors(firstYear, lastYear);
+          setChartPreset('all');
+          document.getElementById('qqqChartStatus').innerText = `QQQ 매일 단위 (${fullQqqRawSeries.length.toLocaleString()}일)`;
+          updatedItems.push(`QQQ 일봉(${fullQqqRawSeries.length.toLocaleString()}거래일)`);
+        }
+
+        if (vixResultText) {
+          updatedItems.push(vixResultText);
+        }
+
+        const now = new Date();
+        const timeStr = now.toLocaleString('ko-KR');
+        document.getElementById('lastUpdatedText').innerText = `마지막 동기화: ${timeStr} (${updatedItems.join(', ') || '완료'})`;
+
+        badge.className = 'px-2.5 py-1 text-xs font-bold bg-emerald-500/20 text-emerald-400 rounded-md border border-emerald-500/30';
+        badge.innerText = '🟢 실시간 API · 구글시트 연동됨';
+
+      } catch (err) {
+        console.error('데이터 연동 오류:', err);
+        badge.className = 'px-2.5 py-1 text-xs font-bold bg-rose-500/20 text-rose-400 rounded-md border border-rose-500/30';
+        badge.innerText = '⚠️ 일부 통신 오류 (수동 보정 가능)';
+        showAlert(`⚠️ 일부 데이터를 불러오는 중 네트워크 또는 API 호출 제한이 발생했습니다. 하단 입력칸에서 수치를 직접 조절하실 수 있습니다.`);
+      } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.classList.remove('opacity-60');
+        recalculateAll();
+      }
+    }
+
+    // 차트 기간 프리셋 버튼 클릭 (5년 / 10년 / 상장일~현재)
+    function setChartPreset(mode) {
+      document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('period-btn-active'));
+      if (mode === '5y') document.getElementById('btnRange5y').classList.add('period-btn-active');
+      if (mode === '10y') document.getElementById('btnRange10y').classList.add('period-btn-active');
+      if (mode === 'all') document.getElementById('btnRangeAll').classList.add('period-btn-active');
+
+      if (!fullQqqRawSeries.length) return;
+
+      const lastDateStr = fullQqqRawSeries[fullQqqRawSeries.length - 1].date;
+      const lastDate = new Date(lastDateStr);
+      const firstYear = parseInt(fullQqqRawSeries[0].date.slice(0, 4), 10);
+      const lastYear = lastDate.getFullYear();
+
+      let cutoffDateStr = fullQqqRawSeries[0].date;
+
+      if (mode === '5y') {
+        const d = new Date(lastDate);
+        d.setFullYear(d.getFullYear() - 5);
+        cutoffDateStr = d.toISOString().slice(0, 10);
+        document.getElementById('startYearSelect').value = Math.max(firstYear, d.getFullYear());
+        document.getElementById('endYearSelect').value = lastYear;
+      } else if (mode === '10y') {
+        const d = new Date(lastDate);
+        d.setFullYear(d.getFullYear() - 10);
+        cutoffDateStr = d.toISOString().slice(0, 10);
+        document.getElementById('startYearSelect').value = Math.max(firstYear, d.getFullYear());
+        document.getElementById('endYearSelect').value = lastYear;
+      } else {
+        document.getElementById('startYearSelect').value = firstYear;
+        document.getElementById('endYearSelect').value = lastYear;
+      }
+
+      currentFilteredSeries = fullQqqRawSeries.filter(item => item.date >= cutoffDateStr);
+      renderFilteredQqqMdd(currentFilteredSeries);
+    }
+
+    // 수동 연도 드롭다운 변경 시
+    function applyManualYearRange() {
+      document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('period-btn-active'));
+
+      let startYear = parseInt(document.getElementById('startYearSelect').value, 10);
+      let endYear = parseInt(document.getElementById('endYearSelect').value, 10);
+
+      if (startYear > endYear) {
+        const temp = startYear;
+        startYear = endYear;
+        endYear = temp;
+        document.getElementById('startYearSelect').value = startYear;
+        document.getElementById('endYearSelect').value = endYear;
+      }
+
+      currentFilteredSeries = fullQqqRawSeries.filter(item => {
+        const y = parseInt(item.date.slice(0, 4), 10);
+        return y >= startYear && y <= endYear;
+      });
+
+      renderFilteredQqqMdd(currentFilteredSeries);
+    }
+
+    // 현재 보고 있는 구간에서 '오늘(가장 마지막 기준일)' 값 강조 토글
+    function toggleFocusTodayInRange() {
+      focusTodayEnabled = !focusTodayEnabled;
+      const btn = document.getElementById('btnFocusToday');
+      btn.classList.toggle('current-pin-active', focusTodayEnabled);
+      renderFilteredQqqMdd(currentFilteredSeries);
+    }
+
+    // 선택된 기간 내 매일 단위 MDD 계산 및 차트 업데이트
+    function renderFilteredQqqMdd(series) {
+      if (!series || series.length === 0) return;
+
+      let runningPeak = 0;
+      let maxMdd = 0;
+      let maxMddDate = series[0].date;
+
+      const labels = [];
+      const mddValues = [];
+
+      series.forEach(item => {
+        if (item.high > runningPeak) {
+          runningPeak = item.high;
+        }
+        const dd = ((item.close - runningPeak) / runningPeak) * 100;
+        if (dd < maxMdd) {
+          maxMdd = dd;
+          maxMddDate = item.date;
+        }
+        labels.push(item.date);
+        mddValues.push(parseFloat(dd.toFixed(2)));
+      });
+
+      const lastIdx = mddValues.length - 1;
+      const todayMdd = mddValues[lastIdx];
+      const todayDate = labels[lastIdx];
+
+      // '현재' 버튼 활성화 시 차트 마지막(오늘/최신) 지점에 강조 마커 표시
+      const pointRadii = new Array(mddValues.length).fill(0);
+      const pointColors = new Array(mddValues.length).fill('transparent');
+      if (focusTodayEnabled && lastIdx >= 0) {
+        pointRadii[lastIdx] = 6;
+        pointColors[lastIdx] = '#38bdf8';
+      }
+
+      const minFloor = Math.min(-30, Math.floor(maxMdd / 10) * 10);
+
+      if (qqqMddChartInstance) {
+        qqqMddChartInstance.data.labels = labels;
+        qqqMddChartInstance.data.datasets[0].data = mddValues;
+        qqqMddChartInstance.data.datasets[0].pointRadius = pointRadii;
+        qqqMddChartInstance.data.datasets[0].pointHoverRadius = 6;
+        qqqMddChartInstance.data.datasets[0].pointBackgroundColor = pointColors;
+        qqqMddChartInstance.data.datasets[0].pointBorderColor = '#ffffff';
+        qqqMddChartInstance.data.datasets[0].pointBorderWidth = focusTodayEnabled ? 2 : 0;
+
+        qqqMddChartInstance.data.datasets[1].data = new Array(labels.length).fill(-10);
+        qqqMddChartInstance.data.datasets[2].data = new Array(labels.length).fill(-20);
+        qqqMddChartInstance.data.datasets[3].data = new Array(labels.length).fill(-30);
+        qqqMddChartInstance.options.scales.y.min = minFloor;
+
+        qqqMddChartInstance.update();
+
+        // '현재' 버튼 클릭 시 해당 구간 끝(오늘/최신) 툴팁을 바로 띄워 보여줌
+        if (focusTodayEnabled && lastIdx >= 0) {
+          qqqMddChartInstance.setActiveElements([{ datasetIndex: 0, index: lastIdx }]);
+          qqqMddChartInstance.tooltip.setActiveElements([{ datasetIndex: 0, index: lastIdx }], { x: 0, y: 0 });
+          qqqMddChartInstance.update();
+        } else {
+          qqqMddChartInstance.setActiveElements([]);
+          qqqMddChartInstance.tooltip.setActiveElements([], { x: 0, y: 0 });
+        }
+      }
+
+      document.getElementById('rangeTodayMddText').innerText = `${todayMdd.toFixed(2)}% (${todayDate})`;
+      document.getElementById('rangeMaxMddText').innerText = `${maxMdd.toFixed(2)}% (${maxMddDate})`;
+      document.getElementById('rangeDateSpanText').innerText = `${series[0].date} ~ ${todayDate} (${series.length.toLocaleString()}일)`;
+    }
+
+    function syncSliderToPrice(val) {
+      document.getElementById('priceInput').value = val;
+      recalculateAll();
+    }
+
+    function syncSliderToVix(val) {
+      document.getElementById('vixInput').value = val;
+      recalculateAll();
+    }
+
+    function syncSliderToFg(val) {
+      document.getElementById('fgInput').value = val;
+      recalculateAll();
+    }
+
+    function applyPreset(ath, price, vix, fg) {
+      document.getElementById('athInput').value = ath;
+      document.getElementById('priceInput').value = price;
+      document.getElementById('priceSlider').value = price;
+      document.getElementById('vixInput').value = vix;
+      document.getElementById('vixSlider').value = vix;
+      document.getElementById('fgInput').value = fg;
+      document.getElementById('fgSlider').value = fg;
+      recalculateAll();
+    }
+
+    function recalculateAll() {
+      const ath = Math.max(1, parseFloat(document.getElementById('athInput').value) || 314.12);
+      const price = Math.max(0.01, parseFloat(document.getElementById('priceInput').value) || 251.23);
+      const vix = Math.max(5, parseFloat(document.getElementById('vixInput').value) || 22.50);
+      const fg = Math.min(100, Math.max(0, parseFloat(document.getElementById('fgInput').value) || 35));
+      const seed = Math.max(0, parseFloat(document.getElementById('seedInput').value) || 10000);
+
+      const slider = document.getElementById('priceSlider');
+      slider.max = Math.ceil(ath * 1.15);
+      slider.min = Math.floor(ath * 0.45);
+      slider.value = price;
+      document.getElementById('vixSlider').value = vix;
+      document.getElementById('fgSlider').value = fg;
+
+      const mddRatio = (price - ath) / ath;
+      const mddPct = mddRatio * 100;
+      const absMdd = Math.abs(Math.min(0, mddPct));
+      const dropDollar = price - ath;
+      const recoveryNeeded = price < ath ? ((ath / price) - 1) * 100 : 0;
+
+      document.getElementById('mddValue').innerText = `${mddPct >= 0 ? '+' : ''}${mddPct.toFixed(2)}%`;
+      document.getElementById('mddDropDollar').innerText = `(${dropDollar >= 0 ? '+' : '-'}$${Math.abs(dropDollar).toFixed(2)})`;
+      document.getElementById('mddSubtext').innerHTML = price < ath
+        ? `전고점 회복까지 <strong class="text-white">+${recoveryNeeded.toFixed(2)}%</strong> 상승 필요`
+        : `현재 <strong class="text-emerald-400">전고점 돌파 / 신고가</strong> 구간입니다`;
+
+      const mddBadge = document.getElementById('mddBadge');
+      const mddValueEl = document.getElementById('mddValue');
+      if (absMdd >= 30) {
+        mddBadge.innerText = '30%+ 폭락장';
+        mddBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500/20 text-rose-400';
+        mddValueEl.className = 'text-4xl font-extrabold text-rose-400';
+      } else if (absMdd >= 20) {
+        mddBadge.innerText = '20%+ 약세장';
+        mddBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 text-orange-400';
+        mddValueEl.className = 'text-4xl font-extrabold text-orange-400';
+      } else if (absMdd >= 10) {
+        mddBadge.innerText = '10%+ 조정장';
+        mddBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300';
+        mddValueEl.className = 'text-4xl font-extrabold text-amber-300';
+      } else {
+        mddBadge.innerText = '정상 / 강세 구간';
+        mddBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400';
+        mddValueEl.className = 'text-4xl font-extrabold text-emerald-400';
+      }
+      document.getElementById('mddBar').style.width = `${Math.min(100, (absMdd / 35) * 100)}%`;
+
+      document.getElementById('regimeCard10').classList.toggle('ring-2', absMdd >= 10 && absMdd < 20);
+      document.getElementById('regimeCard10').classList.toggle('ring-amber-400', absMdd >= 10 && absMdd < 20);
+      document.getElementById('regimeCard20').classList.toggle('ring-2', absMdd >= 20 && absMdd < 30);
+      document.getElementById('regimeCard20').classList.toggle('ring-orange-400', absMdd >= 20 && absMdd < 30);
+      document.getElementById('regimeCard30').classList.toggle('ring-2', absMdd >= 30);
+      document.getElementById('regimeCard30').classList.toggle('ring-rose-500', absMdd >= 30);
+
+      document.getElementById('vixValue').innerText = vix.toFixed(2);
+      const vixBadge = document.getElementById('vixBadge');
+      const vixDesc = document.getElementById('vixDesc');
+      if (vix >= 35) {
+        vixBadge.innerText = '극단적 패닉';
+        vixBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500/20 text-rose-400';
+        vixDesc.innerText = '투매 발생 구간 · 역사적 바닥권 근접 신호';
+      } else if (vix >= 25) {
+        vixBadge.innerText = '높은 공포';
+        vixBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 text-orange-400';
+        vixDesc.innerText = '시장 경계감 급증 · 분할매수 유리 구간';
+      } else if (vix >= 18) {
+        vixBadge.innerText = '경계 / 보통';
+        vixBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300';
+        vixDesc.innerText = '평균 수준의 변동성 · 조정 여부 주시';
+      } else {
+        vixBadge.innerText = '안정 / 낙관';
+        vixBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400';
+        vixDesc.innerText = '변동성 낮음 · 추격매수보다 현금 확보 권장';
+      }
+      document.getElementById('vixBar').style.width = `${Math.min(100, ((vix - 10) / 35) * 100)}%`;
+
+      document.getElementById('fgValue').innerText = Math.round(fg);
+      const fgBadge = document.getElementById('fgBadge');
+      const fgDesc = document.getElementById('fgDesc');
+      if (fg <= 24) {
+        fgBadge.innerText = '극단적 공포';
+        fgBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500/20 text-rose-400';
+        fgDesc.innerText = 'Extreme Fear · 역발상 적극 매수 찬스';
+      } else if (fg <= 44) {
+        fgBadge.innerText = '공포 (Fear)';
+        fgBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 text-orange-400';
+        fgDesc.innerText = '투자심리 위축 · 1~2차 분할매수 고려';
+      } else if (fg <= 55) {
+        fgBadge.innerText = '중립 (Neutral)';
+        fgBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-slate-700 text-slate-300';
+        fgDesc.innerText = '방향성 탐색 구간 · 정기 적립식 유지';
+      } else if (fg <= 74) {
+        fgBadge.innerText = '탐욕 (Greed)';
+        fgBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400';
+        fgDesc.innerText = '상승 추세 지속 · 추가매수 시드 비축';
+      } else {
+        fgBadge.innerText = '극단적 탐욕';
+        fgBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-sky-500/20 text-sky-400';
+        fgDesc.innerText = 'Extreme Greed · 과열 주의 및 현금 비중 확대';
+      }
+      document.getElementById('fgBar').style.width = `${fg}%`;
+
+      const mddScore = Math.min(45, (absMdd / 30) * 45);
+      const vixScore = Math.min(30, Math.max(0, ((vix - 14) / 26) * 30));
+      const fgScore = Math.min(25, ((100 - fg) / 100) * 25);
+      const totalScore = Math.round(mddScore + vixScore + fgScore);
+
+      document.getElementById('buyScoreValue').innerText = totalScore;
+      const signalTag = document.getElementById('signalTag');
+      const signalActionText = document.getElementById('signalActionText');
+
+      if (totalScore >= 75) {
+        signalTag.innerText = '적극 매수 적기';
+        signalTag.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500/20 text-rose-300';
+        signalActionText.innerText = 'MDD·VIX·공포지수가 모두 극단적 저평가 영역입니다. 준비된 시드를 과감히 투입할 타이밍입니다.';
+      } else if (totalScore >= 50) {
+        signalTag.innerText = '분할매수 구간';
+        signalTag.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-300';
+        signalActionText.innerText = '조정/약세장 진입과 함께 시장 공포가 높아졌습니다. 원칙대로 구간별 분할매수를 실행하세요.';
+      } else if (totalScore >= 30) {
+        signalTag.innerText = '관망 / 소액 적립';
+        signalTag.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300';
+        signalActionText.innerText = '아직 본격적인 하락장 기준(-10% 이상)에 미치지 못했습니다. 현금을 아끼며 대기하세요.';
+      } else {
+        signalTag.innerText = '현금 확보 / 대기';
+        signalTag.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-slate-700 text-slate-300';
+        signalActionText.innerText = '고점 부근이거나 탐욕 구간입니다. 추가매수 시드를 비축하고 다음 조정을 기다리세요.';
+      }
+
+      const tbody = document.getElementById('dcaTableBody');
+      tbody.innerHTML = '';
+
+      let triggeredCash = 0;
+      let triggeredShares = 0;
+      let triggeredWeight = 0;
+
+      dcaTiers.forEach((tier) => {
+        const targetPrice = ath * (1 - tier.drop);
+        const diffPct = ((targetPrice - price) / price) * 100;
+        const allocCash = seed * tier.weight;
+        const shares = allocCash / targetPrice;
+        const isTriggered = price <= targetPrice;
+
+        if (isTriggered) {
+          triggeredCash += allocCash;
+          triggeredShares += shares;
+          triggeredWeight += tier.weight * 100;
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = isTriggered
+          ? 'bg-emerald-950/35 hover:bg-emerald-900/40 transition-colors'
+          : 'bg-slate-950/30 hover:bg-slate-900/60 transition-colors';
+
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-semibold ${isTriggered ? 'text-emerald-300' : 'text-slate-200'}">${tier.name}</td>
+          <td class="py-3 px-4 font-bold text-rose-400">-${(tier.drop * 100).toFixed(0)}%</td>
+          <td class="py-3 px-4 font-bold text-white">$${targetPrice.toFixed(2)}</td>
+          <td class="py-3 px-4 text-xs ${isTriggered ? 'text-emerald-400 font-semibold' : 'text-slate-400'}">
+            ${isTriggered ? '목표가 도달 완료' : `${diffPct.toFixed(1)}% 추가 하락 시`}
+          </td>
+          <td class="py-3 px-4 text-slate-300">${(tier.weight * 100).toFixed(0)}%</td>
+          <td class="py-3 px-4 font-semibold text-slate-200">$${allocCash.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
+          <td class="py-3 px-4 text-sky-300 font-medium">${shares.toFixed(2)}주</td>
+          <td class="py-3 px-4">
+            ${
+              isTriggered
+                ? '<span class="px-2.5 py-1 text-xs font-bold rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">● 매수 활성</span>'
+                : '<span class="px-2.5 py-1 text-xs font-medium rounded-md bg-slate-800 text-slate-400">대기 중</span>'
+            }
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('recommendedDeploy').innerText = `시드의 ${triggeredWeight.toFixed(0)}% ($${triggeredCash.toLocaleString(undefined, { maximumFractionDigits: 0 })})`;
+      document.getElementById('totalTriggeredCash').innerText = `$${triggeredCash.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+      document.getElementById('totalTriggeredShares').innerText = `${triggeredShares.toFixed(2)}주`;
+      document.getElementById('avgBuyPrice').innerText = triggeredShares > 0
+        ? `$${(triggeredCash / triggeredShares).toFixed(2)}`
+        : '-';
+    }
+
+    function initQqqMddChart() {
+      const ctx = document.getElementById('qqqMddHistoryChart').getContext('2d');
+      qqqMddChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'QQQ 일별 MDD (%)',
+              data: [],
+              borderColor: '#f43f5e',
+              backgroundColor: 'rgba(244, 63, 94, 0.22)',
+              borderWidth: 1.3,
+              fill: true,
+              tension: 0.05,
+              pointRadius: 0,
+              pointHoverRadius: 5,
+              order: 1
+            },
+            {
+              label: '-10% 조정선',
+              data: [],
+              borderColor: 'rgba(251, 191, 36, 0.55)',
+              borderWidth: 1,
+              borderDash: [4, 4],
+              pointRadius: 0,
+              fill: false,
+              order: 2
+            },
+            {
+              label: '-20% 약세선',
+              data: [],
+              borderColor: 'rgba(249, 115, 22, 0.65)',
+              borderWidth: 1,
+              borderDash: [4, 4],
+              pointRadius: 0,
+              fill: false,
+              order: 3
+            },
+            {
+              label: '-30% 폭락선',
+              data: [],
+              borderColor: 'rgba(244, 63, 94, 0.75)',
+              borderWidth: 1,
+              borderDash: [4, 4],
+              pointRadius: 0,
+              fill: false,
+              order: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#cbd5e1',
+                font: { size: 10 },
+                boxWidth: 12,
+                filter: (item) => item.datasetIndex === 0
+              }
+            },
+            tooltip: {
+              callbacks: {
+                title: (items) => `기준일 (매일): ${items[0].label}`,
+                label: (ctx) => {
+                  if (ctx.datasetIndex === 0) {
+                    return `QQQ MDD: ${ctx.parsed.y.toFixed(2)}%`;
+                  }
+                  return null;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                color: '#94a3b8',
+                font: { size: 10 },
+                maxTicksLimit: 7
+              },
+              grid: { color: 'rgba(30, 41, 59, 0.35)' }
+            },
+            y: {
+              max: 0,
+              min: -90,
+              ticks: {
+                stepSize: 10,
+                color: (ctx) => {
+                  const v = ctx.tick.value;
+                  if (v === -10) return '#fbbf24';
+                  if (v === -20) return '#fb923c';
+                  if (v === -30) return '#f43f5e';
+                  return '#94a3b8';
+                },
+                font: { size: 11, weight: 'bold' },
+                callback: (val) => val === 0 ? '0%' : `${Math.abs(val)}% (${val}%)`
+              },
+              grid: {
+                color: (ctx) => {
+                  const v = ctx.tick.value;
+                  if (v === -10 || v === -20 || v === -30) return 'rgba(148, 163, 184, 0.25)';
+                  return 'rgba(30, 41, 59, 0.45)';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initQqqMddChart();
+      fullQqqRawSeries = [...fallbackQqqDailyRaw];
+      populateYearSelectors(1999, 2026);
+      setChartPreset('all');
+
+      recalculateAll();
+      fetchLiveMarketData();
+    });
+  </script>
+</body>
+</html>
