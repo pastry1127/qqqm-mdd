@@ -116,7 +116,7 @@
           <p class="text-[11px] text-slate-500 mt-1.5">Twelve Data QQQM 최고가</p>
         </div>
 
-        <!-- QQQM 현재가 (하단 스크롤바/슬라이더 삭제) -->
+        <!-- QQQM 현재가 -->
         <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
           <div class="flex justify-between items-center gap-2 mb-1.5">
             <label for="priceInput" class="block text-xs text-slate-300 font-medium">QQQM 현재가 ($)</label>
@@ -126,7 +126,7 @@
           <p class="text-[11px] text-slate-500 mt-1.5">실시간 시세 자동 반영</p>
         </div>
 
-        <!-- VIX 지수 (하단 스크롤바/슬라이더 삭제) -->
+        <!-- VIX 지수 -->
         <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
           <div class="flex justify-between items-center gap-2 mb-1.5">
             <label for="vixInput" class="block text-xs text-slate-300 font-medium">CBOE VIX 지수</label>
@@ -136,7 +136,7 @@
           <p class="text-[11px] text-slate-500 mt-1.5">구글시트 A/B열 자동 연동</p>
         </div>
 
-        <!-- CNN 공포탐욕지수 (하단 스크롤바/슬라이더 삭제) -->
+        <!-- CNN 공포탐욕지수 -->
         <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
           <div class="flex justify-between items-center gap-2 mb-1.5">
             <label for="fgInput" class="block text-xs text-slate-300 font-medium">CNN 공포·탐욕 (0~100)</label>
@@ -578,9 +578,9 @@
       </div>
     </section>
 
-    <!-- 하단: QQQM MDD 구간별 분할매수 실행 테이블 (행 높이 축소 · 한 줄 표시) -->
+    <!-- 하단: QQQM MDD 구간별 분할매수 실행 테이블 (행 높이 상향 · 모든 셀 한 줄 고정) -->
     <section class="card p-4 sm:p-6">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3.5">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
         <div>
           <h2 class="text-base sm:text-lg font-bold text-white">QQQM MDD 구간별 추가매수 실행 계산기</h2>
           <p class="text-xs text-slate-400 mt-0.5">현재가 및 전고점 기준으로 목표 매수가 도달 시 <span class="text-emerald-400 font-semibold">초록색 활성 표시</span>가 됩니다.</p>
@@ -604,21 +604,21 @@
       </div>
 
       <div class="overflow-x-auto rounded-xl border border-slate-800">
-        <table class="w-full text-left text-xs min-w-[760px]">
+        <table class="w-full text-left text-xs sm:text-sm min-w-[780px]">
           <thead class="bg-slate-900 text-slate-400 border-b border-slate-800">
-            <tr>
-              <th class="py-2 px-2.5 whitespace-nowrap">구간 단계</th>
-              <th class="py-2 px-2.5 whitespace-nowrap">목표 MDD</th>
-              <th class="py-2 px-2.5 whitespace-nowrap">목표 매수가 ($)</th>
-              <th class="py-2 px-2.5 whitespace-nowrap">현재가 대비</th>
-              <th class="py-2 px-2.5 whitespace-nowrap">시드 비중</th>
-              <th class="py-2 px-2.5 whitespace-nowrap">투입 금액 ($)</th>
-              <th class="py-2 px-2.5 whitespace-nowrap">매수 수량 (주)</th>
-              <th class="py-2 px-2.5 whitespace-nowrap">매수 후 예상 평단</th>
-              <th class="py-2 px-2.5 whitespace-nowrap">현재 상태</th>
+            <tr class="h-11">
+              <th class="py-3 px-3 whitespace-nowrap">구간 단계</th>
+              <th class="py-3 px-3 whitespace-nowrap">목표 MDD</th>
+              <th class="py-3 px-3 whitespace-nowrap">목표 매수가 ($)</th>
+              <th class="py-3 px-3 whitespace-nowrap">현재가 대비</th>
+              <th class="py-3 px-3 whitespace-nowrap">시드 비중</th>
+              <th class="py-3 px-3 whitespace-nowrap">투입 금액 ($)</th>
+              <th class="py-3 px-3 whitespace-nowrap">매수 수량 (주)</th>
+              <th class="py-3 px-3 whitespace-nowrap">매수 후 예상 평단</th>
+              <th class="py-3 px-3 whitespace-nowrap">현재 상태</th>
             </tr>
           </thead>
-          <tbody id="dcaTableBody" class="divide-y divide-slate-800/80 leading-none">
+          <tbody id="dcaTableBody" class="divide-y divide-slate-800/80">
             <!-- JS로 동적 생성 -->
           </tbody>
         </table>
@@ -1611,26 +1611,26 @@
         }
 
         const tr = document.createElement('tr');
-        tr.className = isTriggered
+        tr.className = `h-12 ${isTriggered
           ? 'bg-emerald-950/35 hover:bg-emerald-900/40 transition-colors'
-          : 'bg-slate-950/30 hover:bg-slate-900/60 transition-colors';
+          : 'bg-slate-950/30 hover:bg-slate-900/60 transition-colors'}`;
 
         tr.innerHTML = `
-          <td class="py-1.5 px-2.5 whitespace-nowrap font-semibold ${isTriggered ? 'text-emerald-300' : 'text-slate-200'}">${tier.name}</td>
-          <td class="py-1.5 px-2.5 whitespace-nowrap font-bold text-rose-400">-${(tier.drop * 100).toFixed(0)}%</td>
-          <td class="py-1.5 px-2.5 whitespace-nowrap font-bold text-white">$${formatCommaNumber(targetPrice, 2)}</td>
-          <td class="py-1.5 px-2.5 whitespace-nowrap text-[11px] ${isTriggered ? 'text-emerald-400 font-semibold' : 'text-slate-400'}">
+          <td class="py-3 px-3 whitespace-nowrap font-semibold ${isTriggered ? 'text-emerald-300' : 'text-slate-200'}">${tier.name}</td>
+          <td class="py-3 px-3 whitespace-nowrap font-bold text-rose-400">-${(tier.drop * 100).toFixed(0)}%</td>
+          <td class="py-3 px-3 whitespace-nowrap font-bold text-white">$${formatCommaNumber(targetPrice, 2)}</td>
+          <td class="py-3 px-3 whitespace-nowrap text-xs ${isTriggered ? 'text-emerald-400 font-semibold' : 'text-slate-400'}">
             ${isTriggered ? '도달 완료' : `${diffPct.toFixed(1)}% 하락 시`}
           </td>
-          <td class="py-1.5 px-2.5 whitespace-nowrap text-slate-300">${(tier.weight * 100).toFixed(0)}%</td>
-          <td class="py-1.5 px-2.5 whitespace-nowrap font-semibold text-slate-200">$${formatCommaNumber(allocCash, 0)}</td>
-          <td class="py-1.5 px-2.5 whitespace-nowrap text-sky-300 font-medium">${formatCommaNumber(shares, 2)}주</td>
-          <td class="py-1.5 px-2.5 whitespace-nowrap text-amber-200 font-semibold">$${formatCommaNumber(projectedAvgPrice, 2)}</td>
-          <td class="py-1.5 px-2.5 whitespace-nowrap">
+          <td class="py-3 px-3 whitespace-nowrap text-slate-300">${(tier.weight * 100).toFixed(0)}%</td>
+          <td class="py-3 px-3 whitespace-nowrap font-semibold text-slate-200">$${formatCommaNumber(allocCash, 0)}</td>
+          <td class="py-3 px-3 whitespace-nowrap text-sky-300 font-medium">${formatCommaNumber(shares, 2)}주</td>
+          <td class="py-3 px-3 whitespace-nowrap text-amber-200 font-semibold">$${formatCommaNumber(projectedAvgPrice, 2)}</td>
+          <td class="py-3 px-3 whitespace-nowrap">
             ${
               isTriggered
-                ? '<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 whitespace-nowrap">● 매수 활성</span>'
-                : '<span class="px-2 py-0.5 text-[11px] font-medium rounded bg-slate-800 text-slate-400 whitespace-nowrap">대기 중</span>'
+                ? '<span class="inline-flex items-center px-2.5 py-1 text-xs font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 whitespace-nowrap">● 매수 활성</span>'
+                : '<span class="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded bg-slate-800 text-slate-400 whitespace-nowrap">대기 중</span>'
             }
           </td>
         `;
