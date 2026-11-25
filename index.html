@@ -262,6 +262,91 @@
       </div>
     </section>
 
+    <!-- 기술적 보조 지표 바: QQQM 200일 이동평균선 이격도 & RSI(14일) -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <!-- 1. QQQM 200일 이동평균선 이격도 카드 -->
+      <div class="card p-5 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold text-slate-300">QQQM 200일 이동평균선 이격도</span>
+              <span id="sma200SourceBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">일봉 산출</span>
+            </div>
+            <span id="sma200Badge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 text-orange-400">200일선 하회</span>
+          </div>
+
+          <div class="mt-3 flex flex-wrap items-baseline justify-between gap-2">
+            <div class="flex items-baseline gap-2">
+              <span id="sma200DisparityValue" class="text-3xl font-extrabold text-orange-400">-7.21%</span>
+              <span id="sma200DiffDollar" class="text-xs text-slate-400">(-$19.52)</span>
+            </div>
+            <div class="text-xs bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">
+              <span class="text-slate-400">200일선: </span>
+              <strong id="sma200PriceValue" class="text-white font-bold">$270.75</strong>
+            </div>
+          </div>
+
+          <p id="sma200Desc" class="text-xs text-slate-400 mt-2">
+            장기 추세선(200일 이평선) 아래 구간 · 하회 폭 확대 시 분할매수 유리
+          </p>
+        </div>
+
+        <div class="mt-4">
+          <div class="flex justify-between text-[11px] text-slate-500 mb-1">
+            <span>-15% (과매도)</span>
+            <span>0% (200일선)</span>
+            <span>+15% (과열)</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+            <div id="sma200Bar" class="h-full bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400 transition-all duration-300" style="width: 26%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. QQQM RSI (14일 상대강도지수) 카드 -->
+      <div class="card p-5 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold text-slate-300">QQQM RSI (14일 기준)</span>
+              <span id="rsiSourceBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">14일 Wilder</span>
+            </div>
+            <span id="rsiBadge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400">단기 과매도</span>
+          </div>
+
+          <div class="mt-3 flex flex-wrap items-baseline justify-between gap-2">
+            <div class="flex items-baseline gap-2">
+              <span id="rsiValue" class="text-3xl font-extrabold text-emerald-400">28.4</span>
+              <span class="text-xs text-slate-400">/ 100</span>
+            </div>
+            <div class="text-xs bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">
+              <span class="text-slate-400">기준선: </span>
+              <strong class="text-emerald-300 font-bold">30 이하 과매도</strong>
+              <span class="text-slate-600 mx-1">/</span>
+              <strong class="text-rose-300 font-bold">70 이상 과매수</strong>
+            </div>
+          </div>
+
+          <p id="rsiDesc" class="text-xs text-slate-400 mt-2">
+            RSI 30 이하 단기 과매도 구간 진입 · 기술적 반등 및 분할매수 우호 신호
+          </p>
+        </div>
+
+        <div class="mt-4">
+          <div class="flex justify-between text-[11px] text-slate-500 mb-1">
+            <span>0</span>
+            <span class="text-emerald-400 font-semibold">30 (과매도)</span>
+            <span>50 (중립)</span>
+            <span class="text-rose-400 font-semibold">70 (과매수)</span>
+            <span>100</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+            <div id="rsiBar" class="h-full bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500 transition-all duration-300" style="width: 28.4%"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- 중단: QQQ 장기 역사적 하락장 확률 통계 + QQQ 역사적 MDD 추이 차트 -->
     <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
       <!-- 좌측 7컬럼: QQQ (1999~현재) 기반 10% 조정장 / 20% 약세장 / 30% 폭락장 확률 데이터 -->
@@ -508,6 +593,11 @@
     let focusTodayEnabled = false;
     let dailyDetailEnabled = false;
 
+    // QQQM 일봉 종가 배열 (오래된 날짜 -> 최신 날짜 순, 200일선 및 RSI-14 계산용)
+    let qqqmDailyCloses = [];
+    let qqqmSma200Live = 270.75;
+    let qqqmLiveApiPrice = null;
+
     // API 응답 전 또는 폴백용 QQQ 대표 일자별 샘플 데이터 (YYYY-MM-DD 형식)
     const fallbackQqqDailyRaw = [
       { date: '1999-03-10', high: 51.06, close: 51.06 },
@@ -536,6 +626,34 @@
       { date: '2026-01-15', high: 562.40, close: 560.10 },
       { date: '2026-11-24', high: 562.40, close: 537.09 }
     ];
+
+    // Wilder 방식 RSI(14) 계산 함수 (closes: 오래된 날짜 -> 최신 날짜 순 배열)
+    function calculateWilderRsi(closes, period = 14) {
+      if (!closes || closes.length <= period) return null;
+
+      let gainSum = 0;
+      let lossSum = 0;
+      for (let i = 1; i <= period; i++) {
+        const diff = closes[i] - closes[i - 1];
+        if (diff >= 0) gainSum += diff;
+        else lossSum += Math.abs(diff);
+      }
+
+      let avgGain = gainSum / period;
+      let avgLoss = lossSum / period;
+
+      for (let i = period + 1; i < closes.length; i++) {
+        const diff = closes[i] - closes[i - 1];
+        const gain = diff > 0 ? diff : 0;
+        const loss = diff < 0 ? Math.abs(diff) : 0;
+        avgGain = (avgGain * (period - 1) + gain) / period;
+        avgLoss = (avgLoss * (period - 1) + loss) / period;
+      }
+
+      if (avgLoss === 0) return 100;
+      const rs = avgGain / avgLoss;
+      return 100 - (100 / (1 + rs));
+    }
 
     // 비연속 날짜 배열을 일 단위(YYYY-MM-DD)로 보간하여 일별 상세 추이를 구성
     function expandSeriesToDaily(series) {
@@ -811,19 +929,21 @@
       const badge = document.getElementById('apiStatusBadge');
       const refreshBtn = document.getElementById('refreshBtn');
       badge.className = 'px-2.5 py-1 text-xs font-semibold bg-amber-500/20 text-amber-300 rounded-md border border-amber-500/30';
-      badge.innerText = '⏳ 실시간 시세 · 일봉 · CNN · 구글시트 동기화 중...';
+      badge.innerText = '⏳ 실시간 시세 · 일봉 · 200일선/RSI · CNN · 시트 동기화 중...';
       refreshBtn.disabled = true;
       refreshBtn.classList.add('opacity-60');
 
       try {
         const quoteUrl = `https://api.twelvedata.com/quote?symbol=QQQM&apikey=${TWELVE_DATA_API_KEY}`;
         const qqqmAthUrl = `https://api.twelvedata.com/time_series?symbol=QQQM&interval=1month&outputsize=120&apikey=${TWELVE_DATA_API_KEY}`;
+        const qqqmDaily250Url = `https://api.twelvedata.com/time_series?symbol=QQQM&interval=1day&outputsize=250&apikey=${TWELVE_DATA_API_KEY}`;
         const qqqDailyRecentUrl = `https://api.twelvedata.com/time_series?symbol=QQQ&interval=1day&outputsize=5000&apikey=${TWELVE_DATA_API_KEY}`;
         const qqqDailyEarlyUrl = `https://api.twelvedata.com/time_series?symbol=QQQ&interval=1day&start_date=1999-03-10&end_date=2007-06-01&outputsize=5000&apikey=${TWELVE_DATA_API_KEY}`;
 
-        const [quoteRes, qqqmAthRes, qqqRecentRes, qqqEarlyRes, vixResultText, fgResultText] = await Promise.all([
+        const [quoteRes, qqqmAthRes, qqqmDailyRes, qqqRecentRes, qqqEarlyRes, vixResultText, fgResultText] = await Promise.all([
           fetch(quoteUrl).then(r => r.json()),
           fetch(qqqmAthUrl).then(r => r.json()),
+          fetch(qqqmDaily250Url).then(r => r.json()),
           fetch(qqqDailyRecentUrl).then(r => r.json()),
           fetch(qqqDailyEarlyUrl).then(r => r.json()),
           fetchVixFromGoogleSheet(),
@@ -835,6 +955,7 @@
         if (quoteRes && quoteRes.close) {
           const livePrice = parseFloat(quoteRes.close);
           const pctChange = parseFloat(quoteRes.percent_change || 0);
+          qqqmLiveApiPrice = livePrice;
           document.getElementById('priceInput').value = livePrice.toFixed(2);
           document.getElementById('priceSlider').value = livePrice.toFixed(2);
 
@@ -862,6 +983,25 @@
             document.getElementById('athInput').value = maxHigh.toFixed(2);
             document.getElementById('athDateLabel').innerText = `고점일: ${maxDate}`;
             updatedItems.push(`QQQM 전고점($${maxHigh.toFixed(2)})`);
+          }
+        }
+
+        // QQQM 250일 일봉 데이터 처리 (200일 이동평균선 & RSI-14 계산용)
+        if (qqqmDailyRes && Array.isArray(qqqmDailyRes.values) && qqqmDailyRes.values.length > 0) {
+          const ordered = [...qqqmDailyRes.values]
+            .reverse()
+            .map(v => parseFloat(v.close))
+            .filter(v => !isNaN(v));
+
+          if (ordered.length > 0) {
+            qqqmDailyCloses = ordered;
+            const window200 = ordered.slice(-200);
+            const sum200 = window200.reduce((acc, val) => acc + val, 0);
+            qqqmSma200Live = sum200 / window200.length;
+
+            document.getElementById('sma200SourceBadge').innerText = `QQQM ${window200.length}일 실측`;
+            document.getElementById('rsiSourceBadge').innerText = 'QQQM 일봉 실측';
+            updatedItems.push(`200일선($${qqqmSma200Live.toFixed(2)})`);
           }
         }
 
@@ -1101,6 +1241,93 @@
       recalculateAll();
     }
 
+    // 200일 이동평균선 이격도 & RSI(14) 계산 및 UI 반영
+    function updateTechnicalIndicators(price, ath) {
+      const sma200 = qqqmSma200Live > 0 ? qqqmSma200Live : ath * 0.862;
+      const disparityPct = ((price - sma200) / sma200) * 100;
+      const diffDollar = price - sma200;
+
+      const dispEl = document.getElementById('sma200DisparityValue');
+      const diffDollarEl = document.getElementById('sma200DiffDollar');
+      const smaPriceEl = document.getElementById('sma200PriceValue');
+      const smaBadgeEl = document.getElementById('sma200Badge');
+      const smaDescEl = document.getElementById('sma200Desc');
+      const smaBarEl = document.getElementById('sma200Bar');
+
+      dispEl.innerText = `${disparityPct >= 0 ? '+' : ''}${disparityPct.toFixed(2)}%`;
+      diffDollarEl.innerText = `(${diffDollar >= 0 ? '+' : '-'}$${Math.abs(diffDollar).toFixed(2)})`;
+      smaPriceEl.innerText = `$${formatCommaNumber(sma200, 2)}`;
+
+      if (disparityPct <= -10) {
+        smaBadgeEl.innerText = '200일선 -10%↓ 투매권';
+        smaBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500/20 text-rose-400';
+        dispEl.className = 'text-3xl font-extrabold text-rose-400';
+        smaDescEl.innerText = '장기 추세선 대비 큰 폭의 할인 구간 · 역발상 분할매수 매력 높음';
+      } else if (disparityPct < 0) {
+        smaBadgeEl.innerText = '200일선 하회';
+        smaBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 text-orange-400';
+        dispEl.className = 'text-3xl font-extrabold text-orange-400';
+        smaDescEl.innerText = '장기 추세선(200일 이평선) 아래 구간 · 하회 폭 확대 시 분할매수 유리';
+      } else if (disparityPct <= 8) {
+        smaBadgeEl.innerText = '200일선 상회 (안정)';
+        smaBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400';
+        dispEl.className = 'text-3xl font-extrabold text-emerald-400';
+        smaDescEl.innerText = '장기 상승 추세 유지 구간 · 200일선 부근 눌림목 여부 확인';
+      } else {
+        smaBadgeEl.innerText = '200일선 이격 과열';
+        smaBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-sky-500/20 text-sky-400';
+        dispEl.className = 'text-3xl font-extrabold text-sky-300';
+        smaDescEl.innerText = '200일선 대비 이격도가 높음 · 추격매수보다 조정 대기 권장';
+      }
+
+      // -15% ~ +15% 범위를 0% ~ 100% 게이지로 변환
+      const normalizedSmaWidth = Math.min(100, Math.max(0, ((disparityPct + 15) / 30) * 100));
+      smaBarEl.style.width = `${normalizedSmaWidth}%`;
+
+      // RSI(14) 계산: 실측 일봉 배열이 있으면 현재 입력 주가를 마지막 종가로 반영해 계산
+      let rsiVal = null;
+      if (qqqmDailyCloses.length > 14) {
+        const seriesForRsi = [...qqqmDailyCloses];
+        seriesForRsi[seriesForRsi.length - 1] = price;
+        rsiVal = calculateWilderRsi(seriesForRsi, 14);
+      }
+
+      if (rsiVal === null || isNaN(rsiVal)) {
+        const absMdd = Math.abs(Math.min(0, ((price - ath) / ath) * 100));
+        rsiVal = Math.min(78, Math.max(18, 62 - absMdd * 1.65));
+      }
+
+      const rsiEl = document.getElementById('rsiValue');
+      const rsiBadgeEl = document.getElementById('rsiBadge');
+      const rsiDescEl = document.getElementById('rsiDesc');
+      const rsiBarEl = document.getElementById('rsiBar');
+
+      rsiEl.innerText = rsiVal.toFixed(1);
+      rsiBarEl.style.width = `${Math.min(100, Math.max(0, rsiVal))}%`;
+
+      if (rsiVal <= 30) {
+        rsiBadgeEl.innerText = '단기 과매도 (30↓)';
+        rsiBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400';
+        rsiEl.className = 'text-3xl font-extrabold text-emerald-400';
+        rsiDescEl.innerText = 'RSI 30 이하 단기 과매도 구간 진입 · 기술적 반등 및 분할매수 우호 신호';
+      } else if (rsiVal <= 45) {
+        rsiBadgeEl.innerText = '약세 / 매도 우위';
+        rsiBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300';
+        rsiEl.className = 'text-3xl font-extrabold text-amber-300';
+        rsiDescEl.innerText = '단기 모멘텀 둔화 구간 · RSI 30 근접 시 분할매수 타이밍 포착';
+      } else if (rsiVal < 70) {
+        rsiBadgeEl.innerText = '중립 / 양호';
+        rsiBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-sky-500/20 text-sky-400';
+        rsiEl.className = 'text-3xl font-extrabold text-sky-300';
+        rsiDescEl.innerText = '과매도·과매수 어느 쪽에도 치우치지 않은 중립 구간입니다.';
+      } else {
+        rsiBadgeEl.innerText = '단기 과매수 (70↑)';
+        rsiBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500/20 text-rose-400';
+        rsiEl.className = 'text-3xl font-extrabold text-rose-400';
+        rsiDescEl.innerText = 'RSI 70 이상 단기 과열 구간 · 신규 추가매수는 신중히 접근';
+      }
+    }
+
     function recalculateAll() {
       const ath = Math.max(1, parseFloat(document.getElementById('athInput').value) || 314.12);
       const price = Math.max(0.01, parseFloat(document.getElementById('priceInput').value) || 251.23);
@@ -1114,6 +1341,9 @@
       slider.value = price;
       document.getElementById('vixSlider').value = vix;
       document.getElementById('fgSlider').value = fg;
+
+      // 200일 이동평균선 이격도 & RSI(14) 갱신
+      updateTechnicalIndicators(price, ath);
 
       // 구간별 목표 매수가 업데이트 (10% 조정장, 20% 약세장, 30% 폭락장)
       document.getElementById('regimeTarget10').innerText = `$${formatCommaNumber(ath * 0.90, 2)}`;
