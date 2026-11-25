@@ -2,28 +2,43 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>QQQM MDD 실시간 추가매수 & QQQ 역사적 MDD</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap');
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
     body {
       font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
       background-color: #0b0f19;
       color: #e2e8f0;
+      overflow-x: clip;
+      padding-left: max(0.875rem, env(safe-area-inset-left));
+      padding-right: max(0.875rem, env(safe-area-inset-right));
+      padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
     }
     .card {
       background: linear-gradient(145deg, #131a2a 0%, #0f1522 100%);
       border: 1px solid #1e293b;
       border-radius: 16px;
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      min-width: 0;
     }
     .input-box {
       background-color: #090d16;
       border: 1px solid #2a374f;
       color: #f8fafc;
+      font-size: 16px;
       transition: all 0.2s;
+      min-width: 0;
+    }
+    @media (min-width: 640px) {
+      .input-box {
+        font-size: 0.95rem;
+      }
     }
     .input-box:focus {
       outline: none;
@@ -32,6 +47,10 @@
     }
     input[type="range"] {
       accent-color: #38bdf8;
+      height: 24px;
+    }
+    button, select {
+      touch-action: manipulation;
     }
     .period-btn-active {
       background-color: #0284c7 !important;
@@ -50,193 +69,193 @@
     }
   </style>
 </head>
-<body class="min-h-screen p-4 md:p-8">
-  <div class="max-w-7xl mx-auto space-y-6">
+<body class="min-h-screen py-4 md:p-8">
+  <div class="max-w-7xl mx-auto space-y-5 md:space-y-6 min-w-0">
 
     <!-- 헤더 & 실시간 연동 상태바 -->
-    <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-800 pb-5">
-      <div>
+    <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-800 pb-4 md:pb-5 min-w-0">
+      <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
           <span class="px-2.5 py-1 text-xs font-bold bg-sky-500/20 text-sky-400 rounded-md border border-sky-500/30">NASDAQ 100 · QQQM / QQQ</span>
           <span id="apiStatusBadge" class="px-2.5 py-1 text-xs font-semibold bg-amber-500/20 text-amber-300 rounded-md border border-amber-500/30">
             ⏳ Twelve Data & 구글시트 연결 중...
           </span>
         </div>
-        <h1 class="text-2xl md:text-3xl font-extrabold text-white mt-2 tracking-tight">
+        <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-white mt-2 tracking-tight leading-snug">
           QQQM MDD 실시간 추가매수 & 시장심리
         </h1>
-        <p id="lastUpdatedText" class="text-slate-400 text-xs mt-1">
+        <p id="lastUpdatedText" class="text-slate-400 text-xs mt-1 break-words">
           마지막 동기화: 불러오는 중...
         </p>
       </div>
 
       <!-- 컨트롤 버튼 그룹 -->
-      <div class="flex flex-wrap items-center gap-2">
-        <button onclick="fetchLiveMarketData()" id="refreshBtn" class="px-4 py-2 text-xs font-bold rounded-lg bg-sky-600 hover:bg-sky-500 text-white transition flex items-center gap-1.5 shadow-lg shadow-sky-900/30">
+      <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full lg:w-auto">
+        <button onclick="fetchLiveMarketData()" id="refreshBtn" class="col-span-2 sm:col-span-auto min-h-[42px] px-4 py-2 text-xs sm:text-sm font-bold rounded-xl bg-sky-600 hover:bg-sky-500 active:scale-[0.99] text-white transition flex items-center justify-center gap-1.5 shadow-lg shadow-sky-900/30">
           <span>🔄</span> 실시간 API · 시트 갱신
         </button>
-        <div class="h-5 w-[1px] bg-slate-700 mx-1 hidden sm:block"></div>
-        <button onclick="applyPreset(314.12, 282.70, 22.5, 38)" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition">
-          시뮬레이션: -10% 조정
+        <div class="h-5 w-[1px] bg-slate-700 mx-1 hidden lg:block"></div>
+        <button onclick="applyPreset(314.12, 282.70, 22.5, 38)" class="min-h-[38px] px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition">
+          -10% 조정
         </button>
-        <button onclick="applyPreset(314.12, 251.23, 35.08, 12)" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-orange-400 border border-slate-700 transition">
-          시뮬레이션: -20% 약세
+        <button onclick="applyPreset(314.12, 251.23, 35.08, 12)" class="min-h-[38px] px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-orange-400 border border-slate-700 transition">
+          -20% 약세
         </button>
-        <button onclick="applyPreset(314.12, 219.88, 46.5, 6)" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 transition">
-          시뮬레이션: -30% 폭락
+        <button onclick="applyPreset(314.12, 219.88, 46.5, 6)" class="col-span-2 sm:col-span-auto min-h-[38px] px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 transition">
+          -30% 폭락
         </button>
       </div>
     </header>
 
     <!-- API 알림 메시지 박스 -->
     <div id="apiAlertBox" class="hidden p-3.5 rounded-xl bg-slate-900/90 border border-slate-700 text-xs text-slate-300 flex items-center justify-between gap-3">
-      <span id="apiAlertMsg"></span>
-      <button onclick="document.getElementById('apiAlertBox').classList.add('hidden')" class="text-slate-400 hover:text-white font-bold">닫기</button>
+      <span id="apiAlertMsg" class="min-w-0 break-words"></span>
+      <button onclick="document.getElementById('apiAlertBox').classList.add('hidden')" class="shrink-0 px-2 py-1 text-slate-400 hover:text-white font-bold">닫기</button>
     </div>
 
     <!-- 상단 입력 컨트롤 패널 -->
-    <section class="card p-5">
-      <div class="flex items-center justify-between mb-4">
+    <section class="card p-4 sm:p-5">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 mb-4">
         <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-sky-400"></span> 실시간 데이터 및 시뮬레이션 입력
         </h2>
-        <span class="text-xs text-slate-400">Twelve Data API, CNN 지수 및 구글 스프레드시트 CSV에서 자동 반영되며, 직접 수정도 가능합니다.</span>
+        <span class="text-xs text-slate-400">자동 동기화되며 직접 수정도 가능합니다.</span>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 sm:gap-4">
         <!-- QQQM 전고점 -->
-        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
-          <div class="flex justify-between items-center mb-1">
-            <label class="block text-xs text-slate-400">QQQM 역대 최고가 ($)</label>
-            <span id="athDateLabel" class="text-[10px] text-sky-400">ATH 조회중</span>
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 min-w-0">
+          <div class="flex justify-between items-center gap-2 mb-1.5">
+            <label class="block text-xs font-medium text-slate-300">QQQM 역대 최고가 ($)</label>
+            <span id="athDateLabel" class="text-[11px] text-sky-400 shrink-0">ATH 조회중</span>
           </div>
-          <input type="number" id="athInput" step="0.01" value="314.12" oninput="recalculateAll()" class="input-box w-full px-3 py-2 rounded-lg text-base font-bold" />
-          <p class="text-[11px] text-slate-500 mt-1">Twelve Data QQQM 최고가</p>
+          <input type="number" id="athInput" step="0.01" value="314.12" oninput="recalculateAll()" class="input-box w-full px-3 py-2 rounded-lg font-bold" />
+          <p class="text-[11px] text-slate-500 mt-1.5">Twelve Data QQQM 최고가</p>
         </div>
 
         <!-- QQQM 현재가 -->
-        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
-          <div class="flex justify-between items-center mb-1">
-            <label class="block text-xs text-slate-400">QQQM 현재가 ($)</label>
-            <span id="priceChangeLabel" class="text-[10px] text-slate-400">-</span>
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 min-w-0">
+          <div class="flex justify-between items-center gap-2 mb-1.5">
+            <label class="block text-xs font-medium text-slate-300">QQQM 현재가 ($)</label>
+            <span id="priceChangeLabel" class="text-[11px] text-slate-400 shrink-0">-</span>
           </div>
-          <input type="number" id="priceInput" step="0.01" value="251.23" oninput="recalculateAll()" class="input-box w-full px-3 py-2 rounded-lg text-base font-bold text-sky-300" />
+          <input type="number" id="priceInput" step="0.01" value="251.23" oninput="recalculateAll()" class="input-box w-full px-3 py-2 rounded-lg font-bold text-sky-300" />
           <input type="range" id="priceSlider" min="150" max="400" step="0.5" value="251.23" oninput="syncSliderToPrice(this.value)" class="w-full mt-2 cursor-pointer" />
         </div>
 
-        <!-- VIX 지수 (구글 스프레드시트 CSV A열 VIX -> B열 연동) -->
-        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
-          <div class="flex justify-between items-center mb-1">
-            <label class="block text-xs text-slate-400">CBOE VIX 지수</label>
-            <span id="vixSourceBadge" class="text-[10px] text-amber-300">구글시트 조회중</span>
+        <!-- VIX 지수 -->
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 min-w-0">
+          <div class="flex justify-between items-center gap-2 mb-1.5">
+            <label class="block text-xs font-medium text-slate-300">CBOE VIX 지수</label>
+            <span id="vixSourceBadge" class="text-[11px] text-amber-300 truncate">구글시트 조회중</span>
           </div>
-          <input type="number" id="vixInput" step="0.01" value="22.50" oninput="recalculateAll()" class="input-box w-full px-3 py-2 rounded-lg text-base font-bold text-amber-300" />
+          <input type="number" id="vixInput" step="0.01" value="22.50" oninput="recalculateAll()" class="input-box w-full px-3 py-2 rounded-lg font-bold text-amber-300" />
           <input type="range" id="vixSlider" min="10" max="65" step="0.5" value="22.50" oninput="syncSliderToVix(this.value)" class="w-full mt-2 cursor-pointer" />
         </div>
 
         <!-- CNN 공포탐욕지수 -->
-        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
-          <div class="flex justify-between items-center mb-1">
-            <label class="block text-xs text-slate-400">CNN 공포·탐욕 (0~100)</label>
-            <span id="fgSourceBadge" class="text-[10px] text-amber-300">CNN 조회중</span>
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 min-w-0">
+          <div class="flex justify-between items-center gap-2 mb-1.5">
+            <label class="block text-xs font-medium text-slate-300">CNN 공포·탐욕 (0~100)</label>
+            <span id="fgSourceBadge" class="text-[11px] text-amber-300 shrink-0">CNN 조회중</span>
           </div>
-          <input type="number" id="fgInput" min="0" max="100" step="1" value="35" oninput="recalculateAll()" class="input-box w-full px-3 py-2 rounded-lg text-base font-bold text-rose-400" />
+          <input type="number" id="fgInput" min="0" max="100" step="1" value="35" oninput="recalculateAll()" class="input-box w-full px-3 py-2 rounded-lg font-bold text-rose-400" />
           <input type="range" id="fgSlider" min="0" max="100" step="1" value="35" oninput="syncSliderToFg(this.value)" class="w-full mt-2 cursor-pointer" />
           <div class="mt-1 flex justify-end">
-            <a href="https://edition.cnn.com/markets/fear-and-greed" target="_blank" rel="noopener noreferrer" class="text-[10px] text-sky-400 hover:underline">CNN 원본 확인 ↗</a>
+            <a href="https://edition.cnn.com/markets/fear-and-greed" target="_blank" rel="noopener noreferrer" class="text-[11px] text-sky-400 hover:underline">CNN 원본 확인 ↗</a>
           </div>
         </div>
 
         <!-- 추가매수 총 시드머니 -->
-        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
-          <label class="block text-xs text-slate-400 mb-1">대기 시드머니 ($)</label>
-          <input type="text" id="seedInput" inputmode="numeric" value="1,000" oninput="handleSeedInput()" class="input-box w-full px-3 py-2 rounded-lg text-base font-bold text-emerald-400" />
-          <p class="text-[11px] text-slate-500 mt-1">구간별 분할매수 예산</p>
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 sm:col-span-2 lg:col-span-1 min-w-0">
+          <label class="block text-xs font-medium text-slate-300 mb-1.5">대기 시드머니 ($)</label>
+          <input type="text" id="seedInput" inputmode="numeric" value="1,000" oninput="handleSeedInput()" class="input-box w-full px-3 py-2 rounded-lg font-bold text-emerald-400" />
+          <p class="text-[11px] text-slate-500 mt-1.5">구간별 분할매수 예산</p>
         </div>
       </div>
     </section>
 
-    <!-- 내 QQQM 보유 포지션 (은퇴자산관리 15행 연동 + 수동 조정 가능) -->
-    <section class="card p-5">
-      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2 mb-4">
-        <div>
+    <!-- 내 QQQM 보유 포지션 -->
+    <section class="card p-4 sm:p-5">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5 mb-4">
+        <div class="min-w-0">
           <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 내 QQQM 보유 포지션 & 배당/환율 인사이트
           </h2>
-          <p class="text-xs text-slate-400 mt-0.5">
+          <p class="text-xs text-slate-400 mt-1 leading-relaxed">
             구글 스프레드시트 <strong class="text-emerald-300">은퇴자산관리 15행</strong>에서 자동 불러오며, 직접 입력 시 손익·환율·YOC·분할매수 후 평단가가 즉시 갱신됩니다.
           </p>
         </div>
-        <div class="flex items-center gap-2 text-xs">
-          <span class="px-2.5 py-1 rounded bg-slate-900 text-slate-300 border border-slate-800">
-            현재 달러/원: <strong id="liveUsdKrwText" class="text-sky-300">1,400원</strong>
+        <div class="flex items-center gap-2 text-xs self-start lg:self-auto">
+          <span class="px-3 py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-800">
+            현재 달러/원: <strong id="liveUsdKrwText" class="text-sky-300 font-bold">1,400원</strong>
           </span>
         </div>
       </div>
 
       <!-- 5개 포지션 입력 필드 -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 mb-4">
-        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-          <label class="block text-[11px] text-slate-400 mb-1">내보유수량 (주)</label>
-          <input type="number" id="posSharesInput" step="0.01" min="0" value="0" oninput="recalculateAll()" class="input-box w-full px-3 py-1.5 rounded-lg text-sm font-bold text-white" />
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 min-w-0">
+          <label class="block text-xs text-slate-400 mb-1.5">내보유수량 (주)</label>
+          <input type="number" id="posSharesInput" step="0.01" min="0" value="0" oninput="recalculateAll()" class="input-box w-full px-3 py-1.5 rounded-lg font-bold text-white" />
         </div>
-        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-          <label class="block text-[11px] text-slate-400 mb-1">투자원금 ($)</label>
-          <input type="number" id="posPrincipalInput" step="0.01" min="0" value="0" oninput="recalculateAll()" class="input-box w-full px-3 py-1.5 rounded-lg text-sm font-bold text-emerald-300" />
+        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 min-w-0">
+          <label class="block text-xs text-slate-400 mb-1.5">투자원금 ($)</label>
+          <input type="number" id="posPrincipalInput" step="0.01" min="0" value="0" oninput="recalculateAll()" class="input-box w-full px-3 py-1.5 rounded-lg font-bold text-emerald-300" />
         </div>
-        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-          <label class="block text-[11px] text-slate-400 mb-1">평균매수가 ($)</label>
-          <input type="number" id="posAvgPriceInput" step="0.01" min="0" value="0" oninput="recalculateAll()" class="input-box w-full px-3 py-1.5 rounded-lg text-sm font-bold text-sky-300" />
+        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 min-w-0">
+          <label class="block text-xs text-slate-400 mb-1.5">평균매수가 ($)</label>
+          <input type="number" id="posAvgPriceInput" step="0.01" min="0" value="0" oninput="recalculateAll()" class="input-box w-full px-3 py-1.5 rounded-lg font-bold text-sky-300" />
         </div>
-        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-          <label class="block text-[11px] text-slate-400 mb-1">매입환율 (원/$)</label>
-          <input type="number" id="posBuyFxInput" step="1" min="0" value="1380" oninput="recalculateAll()" class="input-box w-full px-3 py-1.5 rounded-lg text-sm font-bold text-amber-300" />
+        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 min-w-0">
+          <label class="block text-xs text-slate-400 mb-1.5">매입환율 (원/$)</label>
+          <input type="number" id="posBuyFxInput" step="1" min="0" value="1380" oninput="recalculateAll()" class="input-box w-full px-3 py-1.5 rounded-lg font-bold text-amber-300" />
         </div>
-        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-          <label class="block text-[11px] text-slate-400 mb-1">연배당금 ($/년)</label>
-          <input type="number" id="posAnnualDivInput" step="0.01" min="0" value="0" oninput="recalculateAll()" class="input-box w-full px-3 py-1.5 rounded-lg text-sm font-bold text-teal-300" />
+        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 col-span-2 sm:col-span-1 min-w-0">
+          <label class="block text-xs text-slate-400 mb-1.5">연배당금 ($/년)</label>
+          <input type="number" id="posAnnualDivInput" step="0.01" min="0" value="0" oninput="recalculateAll()" class="input-box w-full px-3 py-1.5 rounded-lg font-bold text-teal-300" />
         </div>
       </div>
 
       <!-- 4개 포지션 분석 요약 카드 -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 text-xs">
-        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 min-w-0">
           <div class="text-slate-400">달러 기준 평가손익</div>
-          <div id="posDollarPnlValue" class="text-lg font-extrabold text-slate-200 mt-1">$0.00 (0.00%)</div>
-          <div id="posMarketValText" class="text-[11px] text-slate-400 mt-1">평가금 $0.00 · 평단 $0.00</div>
+          <div id="posDollarPnlValue" class="text-base sm:text-lg font-extrabold text-slate-200 mt-1 break-words">$0.00 (0.00%)</div>
+          <div id="posMarketValText" class="text-[11px] text-slate-400 mt-1 break-words">평가금 $0.00 · 평단 $0.00</div>
         </div>
-        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
+        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 min-w-0">
           <div class="text-slate-400">원화(KRW) 환산 손익</div>
-          <div id="posKrwPnlValue" class="text-lg font-extrabold text-slate-200 mt-1">₩0 (0.00%)</div>
-          <div id="posFxDiffText" class="text-[11px] text-slate-400 mt-1">환율 변동 영향 -</div>
+          <div id="posKrwPnlValue" class="text-base sm:text-lg font-extrabold text-slate-200 mt-1 break-words">₩0 (0.00%)</div>
+          <div id="posFxDiffText" class="text-[11px] text-slate-400 mt-1 break-words">환율 변동 영향 -</div>
         </div>
-        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
+        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 min-w-0">
           <div class="text-slate-400">투자원금 대비 연배당수익률 (YOC)</div>
-          <div id="posYocValue" class="text-lg font-extrabold text-teal-300 mt-1">0.00%</div>
-          <div id="posDivReinvestText" class="text-[11px] text-slate-400 mt-1">연배당 $0.00 · 현재가 기준 0.00주 매수 가능</div>
+          <div id="posYocValue" class="text-base sm:text-lg font-extrabold text-teal-300 mt-1">0.00%</div>
+          <div id="posDivReinvestText" class="text-[11px] text-slate-400 mt-1 break-words">연배당 $0.00 · 현재가 기준 0.00주 매수 가능</div>
         </div>
-        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
+        <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 min-w-0">
           <div class="text-slate-400">현재가 vs 내 평균매수가</div>
-          <div id="posVsAvgValue" class="text-lg font-extrabold text-sky-300 mt-1">-</div>
+          <div id="posVsAvgValue" class="text-base sm:text-lg font-extrabold text-sky-300 mt-1">-</div>
           <div id="posRow15RawEcho" class="text-[11px] text-slate-400 mt-1 truncate">15행 데이터 대기 중</div>
         </div>
       </div>
     </section>
 
     <!-- 4대 핵심 지표 카드 -->
-    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
       <!-- 1. QQQM MDD 카드 -->
-      <div class="card p-5 flex flex-col justify-between">
+      <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between gap-2">
             <span class="text-xs font-semibold text-slate-400">QQQM 현재 MDD</span>
             <span id="mddBadge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500/20 text-rose-400">약세장 진입</span>
           </div>
-          <div class="mt-3 flex items-baseline gap-2">
-            <span id="mddValue" class="text-4xl font-extrabold text-rose-400">-20.02%</span>
+          <div class="mt-3 flex items-baseline gap-2 flex-wrap">
+            <span id="mddValue" class="text-3xl sm:text-4xl font-extrabold text-rose-400">-20.02%</span>
             <span id="mddDropDollar" class="text-xs text-slate-400">(-$62.89)</span>
           </div>
-          <div class="mt-2.5 flex items-center justify-between text-xs bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">
+          <div class="mt-2.5 flex items-center justify-between text-xs bg-slate-900/80 px-3 py-2 rounded-lg border border-slate-800">
             <span class="text-slate-400">실시간 현재 주가</span>
             <strong id="mddCurrentPrice" class="text-sky-300 font-bold text-sm">$251.23</strong>
           </div>
@@ -256,17 +275,17 @@
       </div>
 
       <!-- 2. VIX 변동성 지수 카드 -->
-      <div class="card p-5 flex flex-col justify-between">
+      <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between gap-2">
             <span class="text-xs font-semibold text-slate-400">CBOE VIX (구글시트 연동)</span>
             <span id="vixBadge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 text-orange-400">높은 공포</span>
           </div>
           <div class="mt-3 flex items-baseline gap-2">
-            <span id="vixValue" class="text-4xl font-extrabold text-amber-300">22.50</span>
+            <span id="vixValue" class="text-3xl sm:text-4xl font-extrabold text-amber-300">22.50</span>
             <span class="text-xs text-slate-400">pt</span>
           </div>
-          <p id="vixDesc" class="text-xs text-slate-400 mt-2">평균(19.5) 상회 · 분할매수 우호 구간</p>
+          <p id="vixDesc" class="text-xs text-slate-400 mt-2 leading-relaxed">평균(19.5) 상회 · 분할매수 우호 구간</p>
         </div>
         <div class="mt-4">
           <div class="flex justify-between text-[11px] text-slate-500 mb-1">
@@ -282,17 +301,17 @@
       </div>
 
       <!-- 3. CNN 공포·탐욕 지수 카드 -->
-      <div class="card p-5 flex flex-col justify-between">
+      <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between gap-2">
             <span class="text-xs font-semibold text-slate-400">CNN 공포·탐욕 지수</span>
             <span id="fgBadge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500/20 text-rose-400">공포 (Fear)</span>
           </div>
           <div class="mt-3 flex items-baseline gap-2">
-            <span id="fgValue" class="text-4xl font-extrabold text-rose-400">35</span>
+            <span id="fgValue" class="text-3xl sm:text-4xl font-extrabold text-rose-400">35</span>
             <span class="text-xs text-slate-400">/ 100</span>
           </div>
-          <p id="fgDesc" class="text-xs text-slate-400 mt-2">25 이하 극단적 공포 진입 시 적극 매수 구간</p>
+          <p id="fgDesc" class="text-xs text-slate-400 mt-2 leading-relaxed">25 이하 극단적 공포 진입 시 적극 매수 구간</p>
         </div>
         <div class="mt-4">
           <div class="flex justify-between text-[11px] text-slate-500 mb-1">
@@ -308,14 +327,14 @@
       </div>
 
       <!-- 4. 종합 추가매수 매력도 점수 카드 -->
-      <div class="card p-5 flex flex-col justify-between border-sky-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950/30">
+      <div class="card p-4 sm:p-5 flex flex-col justify-between border-sky-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950/30">
         <div>
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between gap-2">
             <span class="text-xs font-semibold text-sky-300">종합 추가매수 시그널</span>
             <span id="signalTag" class="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-300">분할매수 구간</span>
           </div>
           <div class="mt-3 flex items-baseline gap-2">
-            <span id="buyScoreValue" class="text-4xl font-extrabold text-white">68</span>
+            <span id="buyScoreValue" class="text-3xl sm:text-4xl font-extrabold text-white">68</span>
             <span class="text-xs text-slate-400">/ 100점</span>
           </div>
           <p id="signalActionText" class="text-xs text-slate-300 mt-2 leading-relaxed">
@@ -330,21 +349,21 @@
     </section>
 
     <!-- 기술적 보조 지표 바: QQQM 200일 이동평균선 이격도 & RSI(14일) -->
-    <section class="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
       <!-- 1. QQQM 200일 이동평균선 이격도 카드 -->
-      <div class="card p-5 flex flex-col justify-between">
+      <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-2 flex-wrap">
               <span class="text-xs font-semibold text-slate-300">QQQM 200일 이동평균선 이격도</span>
-              <span id="sma200SourceBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">일봉 산출</span>
+              <span id="sma200SourceBadge" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">일봉 산출</span>
             </div>
             <span id="sma200Badge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 text-orange-400">200일선 하회</span>
           </div>
 
           <div class="mt-3 flex flex-wrap items-baseline justify-between gap-2">
             <div class="flex items-baseline gap-2">
-              <span id="sma200DisparityValue" class="text-3xl font-extrabold text-orange-400">-7.21%</span>
+              <span id="sma200DisparityValue" class="text-2xl sm:text-3xl font-extrabold text-orange-400">-7.21%</span>
               <span id="sma200DiffDollar" class="text-xs text-slate-400">(-$19.52)</span>
             </div>
             <div class="text-xs bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">
@@ -353,7 +372,7 @@
             </div>
           </div>
 
-          <p id="sma200Desc" class="text-xs text-slate-400 mt-2">
+          <p id="sma200Desc" class="text-xs text-slate-400 mt-2 leading-relaxed">
             장기 추세선(200일 이평선) 아래 구간 · 하회 폭 확대 시 분할매수 유리
           </p>
         </div>
@@ -371,30 +390,30 @@
       </div>
 
       <!-- 2. QQQM RSI (14일 상대강도지수) 카드 -->
-      <div class="card p-5 flex flex-col justify-between">
+      <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <div class="flex items-center gap-2 flex-wrap">
               <span class="text-xs font-semibold text-slate-300">QQQM RSI (14일 기준)</span>
-              <span id="rsiSourceBadge" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">14일 Wilder</span>
+              <span id="rsiSourceBadge" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">14일 Wilder</span>
             </div>
             <span id="rsiBadge" class="px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400">단기 과매도</span>
           </div>
 
           <div class="mt-3 flex flex-wrap items-baseline justify-between gap-2">
             <div class="flex items-baseline gap-2">
-              <span id="rsiValue" class="text-3xl font-extrabold text-emerald-400">28.4</span>
+              <span id="rsiValue" class="text-2xl sm:text-3xl font-extrabold text-emerald-400">28.4</span>
               <span class="text-xs text-slate-400">/ 100</span>
             </div>
             <div class="text-xs bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">
-              <span class="text-slate-400">기준선: </span>
-              <strong class="text-emerald-300 font-bold">30 이하 과매도</strong>
+              <span class="text-slate-400">기준: </span>
+              <strong class="text-emerald-300 font-bold">30↓ 과매도</strong>
               <span class="text-slate-600 mx-1">/</span>
-              <strong class="text-rose-300 font-bold">70 이상 과매수</strong>
+              <strong class="text-rose-300 font-bold">70↑ 과매수</strong>
             </div>
           </div>
 
-          <p id="rsiDesc" class="text-xs text-slate-400 mt-2">
+          <p id="rsiDesc" class="text-xs text-slate-400 mt-2 leading-relaxed">
             RSI 30 이하 단기 과매도 구간 진입 · 기술적 반등 및 분할매수 우호 신호
           </p>
         </div>
@@ -415,31 +434,31 @@
     </section>
 
     <!-- 중단: QQQ 장기 역사적 하락장 확률 통계 + QQQ 역사적 MDD 추이 차트 -->
-    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6">
       <!-- 좌측 7컬럼: QQQ (1999~현재) 기반 10% 조정장 / 20% 약세장 / 30% 폭락장 확률 데이터 -->
-      <div class="card p-6 lg:col-span-7 flex flex-col justify-between">
+      <div class="card p-4 sm:p-6 lg:col-span-7 flex flex-col justify-between">
         <div>
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-            <div>
-              <h2 class="text-lg font-bold text-white">QQQ 장기 역사적 하락장 구간별 확률 데이터</h2>
-              <p class="text-xs text-slate-400 mt-0.5">QQQM의 짧은 상장 기간(2020~)을 보완하기 위한 동일 지수 QQQ(1999년 상장~) 장기 통계</p>
+            <div class="min-w-0">
+              <h2 class="text-base sm:text-lg font-bold text-white">QQQ 장기 역사적 하락장 구간별 확률 데이터</h2>
+              <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">QQQM의 짧은 상장 기간(2020~)을 보완하기 위한 동일 지수 QQQ(1999년 상장~) 장기 통계</p>
             </div>
-            <span class="text-xs px-2.5 py-1 rounded bg-sky-500/10 text-sky-300 border border-sky-500/30 self-start font-semibold">
-              QQQ 27년+ 데이터 기준
+            <span class="text-xs px-2.5 py-1 rounded bg-sky-500/10 text-sky-300 border border-sky-500/30 self-start font-semibold shrink-0">
+              QQQ 27년+ 기준
             </span>
           </div>
 
           <!-- 3대 하락장 확률 카드 -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-4">
             <!-- 10% 조정장 -->
             <div id="regimeCard10" class="p-4 rounded-xl bg-slate-900/80 border border-amber-500/30 transition-all">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-amber-400">10% 조정장</span>
                 <span class="text-[11px] text-slate-400">MDD -10% 이상</span>
               </div>
-              <div class="mt-2 text-3xl font-extrabold text-white">74.1%</div>
+              <div class="mt-2 text-2xl sm:text-3xl font-extrabold text-white">74.1%</div>
               <p class="text-xs text-slate-400 mt-1">연간 발생 확률 (약 1.3년에 1회)</p>
-              <div class="mt-3 pt-2.5 border-t border-slate-800 text-[11px] space-y-1 text-slate-300">
+              <div class="mt-3 pt-2.5 border-t border-slate-800 text-xs space-y-1 text-slate-300">
                 <div class="flex justify-between">
                   <span>목표 매수가 (-10%):</span>
                   <span id="regimeTarget10" class="font-bold text-amber-300">$282.71</span>
@@ -455,9 +474,9 @@
                 <span class="text-xs font-bold text-orange-400">20% 약세장</span>
                 <span class="text-[11px] text-slate-400">MDD -20% 이상</span>
               </div>
-              <div class="mt-2 text-3xl font-extrabold text-white">29.6%</div>
+              <div class="mt-2 text-2xl sm:text-3xl font-extrabold text-white">29.6%</div>
               <p class="text-xs text-slate-400 mt-1">연간 발생 확률 (약 3.4년에 1회)</p>
-              <div class="mt-3 pt-2.5 border-t border-slate-800 text-[11px] space-y-1 text-slate-300">
+              <div class="mt-3 pt-2.5 border-t border-slate-800 text-xs space-y-1 text-slate-300">
                 <div class="flex justify-between">
                   <span>목표 매수가 (-20%):</span>
                   <span id="regimeTarget20" class="font-bold text-orange-300">$251.30</span>
@@ -473,14 +492,14 @@
                 <span class="text-xs font-bold text-rose-400">30% 폭락장</span>
                 <span class="text-[11px] text-slate-400">MDD -30% 이상</span>
               </div>
-              <div class="mt-2 text-3xl font-extrabold text-white">14.8%</div>
+              <div class="mt-2 text-2xl sm:text-3xl font-extrabold text-white">14.8%</div>
               <p class="text-xs text-slate-400 mt-1">연간 발생 확률 (약 6.8년에 1회)</p>
-              <div class="mt-3 pt-2.5 border-t border-slate-800 text-[11px] space-y-1 text-slate-300">
+              <div class="mt-3 pt-2.5 border-t border-slate-800 text-xs space-y-1 text-slate-300">
                 <div class="flex justify-between">
                   <span>목표 매수가 (-30%):</span>
                   <span id="regimeTarget30" class="font-bold text-rose-300">$219.88</span>
                 </div>
-                <div class="flex justify-between"><span>QQQ 최대 MDD:</span><span class="font-semibold text-rose-400">-82.9% (닷컴) / -35.6% ('22)</span></div>
+                <div class="flex justify-between gap-2"><span>QQQ 최대 MDD:</span><span class="font-semibold text-rose-400 text-right">-82.9% / -35.6%</span></div>
                 <div class="flex justify-between"><span>전고점 회복:</span><span class="font-semibold">평균 24.0개월</span></div>
               </div>
             </div>
@@ -488,124 +507,127 @@
 
           <!-- 조건부 심화 확률 테이블 -->
           <div class="overflow-x-auto rounded-xl border border-slate-800">
-            <table class="w-full text-left text-xs">
+            <table class="w-full text-left text-xs whitespace-nowrap">
               <thead class="bg-slate-900 text-slate-400 border-b border-slate-800">
                 <tr>
-                  <th class="py-2.5 px-3.5">QQQ 하락 구간 기준</th>
-                  <th class="py-2.5 px-3.5">연간 발생 빈도</th>
-                  <th class="py-2.5 px-3.5">다음 단계 심화 확률</th>
-                  <th class="py-2.5 px-3.5">평균 VIX 구간</th>
-                  <th class="py-2.5 px-3.5">향후 1년 평균 반등률</th>
+                  <th class="py-2.5 px-3">QQQ 하락 구간 기준</th>
+                  <th class="py-2.5 px-3">연간 발생 빈도</th>
+                  <th class="py-2.5 px-3">다음 단계 심화 확률</th>
+                  <th class="py-2.5 px-3">평균 VIX</th>
+                  <th class="py-2.5 px-3">1년 평균 반등률</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-800/80 bg-slate-950/40">
                 <tr>
-                  <td class="py-2.5 px-3.5 font-semibold text-amber-300">-10% 조정장 진입 시</td>
-                  <td class="py-2.5 px-3.5">74.1%</td>
-                  <td class="py-2.5 px-3.5 text-slate-300">-20% 약세장으로 심화: <strong class="text-white">40.0%</strong></td>
-                  <td class="py-2.5 px-3.5">22 ~ 28</td>
-                  <td class="py-2.5 px-3.5 text-emerald-400 font-bold">+21.8%</td>
+                  <td class="py-2.5 px-3 font-semibold text-amber-300">-10% 조정장 진입 시</td>
+                  <td class="py-2.5 px-3">74.1%</td>
+                  <td class="py-2.5 px-3 text-slate-300">-20% 약세 심화: <strong class="text-white">40.0%</strong></td>
+                  <td class="py-2.5 px-3">22 ~ 28</td>
+                  <td class="py-2.5 px-3 text-emerald-400 font-bold">+21.8%</td>
                 </tr>
                 <tr>
-                  <td class="py-2.5 px-3.5 font-semibold text-orange-400">-20% 약세장 진입 시</td>
-                  <td class="py-2.5 px-3.5">29.6%</td>
-                  <td class="py-2.5 px-3.5 text-slate-300">-30% 폭락장으로 심화: <strong class="text-white">50.0%</strong></td>
-                  <td class="py-2.5 px-3.5">30 ~ 38</td>
-                  <td class="py-2.5 px-3.5 text-emerald-400 font-bold">+35.2%</td>
+                  <td class="py-2.5 px-3 font-semibold text-orange-400">-20% 약세장 진입 시</td>
+                  <td class="py-2.5 px-3">29.6%</td>
+                  <td class="py-2.5 px-3 text-slate-300">-30% 폭락 심화: <strong class="text-white">50.0%</strong></td>
+                  <td class="py-2.5 px-3">30 ~ 38</td>
+                  <td class="py-2.5 px-3 text-emerald-400 font-bold">+35.2%</td>
                 </tr>
                 <tr>
-                  <td class="py-2.5 px-3.5 font-semibold text-rose-400">-30% 폭락장 진입 시</td>
-                  <td class="py-2.5 px-3.5">14.8%</td>
-                  <td class="py-2.5 px-3.5 text-slate-300">-35% 이상 심화: <strong class="text-white">42.5%</strong></td>
-                  <td class="py-2.5 px-3.5">38 ~ 55+</td>
-                  <td class="py-2.5 px-3.5 text-emerald-400 font-bold">+49.1%</td>
+                  <td class="py-2.5 px-3 font-semibold text-rose-400">-30% 폭락장 진입 시</td>
+                  <td class="py-2.5 px-3">14.8%</td>
+                  <td class="py-2.5 px-3 text-slate-300">-35% 이상 심화: <strong class="text-white">42.5%</strong></td>
+                  <td class="py-2.5 px-3">38 ~ 55+</td>
+                  <td class="py-2.5 px-3 text-emerald-400 font-bold">+49.1%</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        <p class="text-[11px] text-slate-500 mt-3">
+        <p class="text-[11px] text-slate-500 mt-3 leading-relaxed">
           * QQQM과 QQQ는 모두 동일한 나스닥 100 지수를 추종하므로 장기 변동성과 MDD 패턴이 동일합니다.
         </p>
       </div>
 
       <!-- 우측 5컬럼: QQQ 역사적 MDD 추이 차트 -->
-      <div class="card p-6 lg:col-span-5 flex flex-col justify-between">
+      <div class="card p-4 sm:p-6 lg:col-span-5 flex flex-col justify-between">
         <div>
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h2 class="text-lg font-bold text-white">QQQ 역사적 MDD 추이 차트</h2>
-              <p class="text-[11px] text-slate-400 mt-0.5">일 단위(YYYY-MM-DD) 상세 · Y축 10% / 20% / 30% 기준선</p>
+              <h2 class="text-base sm:text-lg font-bold text-white">QQQ 역사적 MDD 추이 차트</h2>
+              <p class="text-[11px] text-slate-400 mt-0.5">일 단위(YYYY-MM-DD) 상세 · 10% / 20% / 30% 기준선</p>
             </div>
-            <span id="qqqChartStatus" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">1999~현재 일 단위</span>
+            <span id="qqqChartStatus" class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">1999~현재 일 단위</span>
           </div>
 
           <!-- 기간 프리셋 버튼 & 수동 연도 범위 컨트롤 -->
-          <div class="mt-3 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
-            <div class="flex flex-wrap items-center gap-1">
-              <button id="btnRange5y" onclick="setChartPreset('5y')" class="period-btn px-2 py-1 text-[11px] font-bold rounded-md bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
+          <div class="mt-3 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button id="btnRange5y" onclick="setChartPreset('5y')" class="period-btn min-h-[34px] px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
                 5년
               </button>
-              <button id="btnRange10y" onclick="setChartPreset('10y')" class="period-btn px-2 py-1 text-[11px] font-bold rounded-md bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
+              <button id="btnRange10y" onclick="setChartPreset('10y')" class="period-btn min-h-[34px] px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
                 10년
               </button>
-              <button id="btnRangeAll" onclick="setChartPreset('all')" class="period-btn period-btn-active px-2 py-1 text-[11px] font-bold rounded-md bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
+              <button id="btnRangeAll" onclick="setChartPreset('all')" class="period-btn period-btn-active min-h-[34px] px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
                 상장일~현재
               </button>
-              <button id="btnDailyDetail" onclick="toggleDailyDetailMode()" class="px-2 py-1 text-[11px] font-bold rounded-md bg-teal-950/60 text-teal-300 border border-teal-500/40 hover:bg-teal-900/60 transition">
+              <button id="btnDailyDetail" onclick="toggleDailyDetailMode()" class="min-h-[34px] px-2.5 py-1 text-xs font-bold rounded-lg bg-teal-950/60 text-teal-300 border border-teal-500/40 hover:bg-teal-900/60 transition">
                 일 단위 상세
               </button>
-              <button id="btnFocusToday" onclick="toggleFocusTodayInRange()" class="px-2 py-1 text-[11px] font-bold rounded-md bg-rose-950/60 text-rose-300 border border-rose-500/40 hover:bg-rose-900/60 transition">
+              <button id="btnFocusToday" onclick="toggleFocusTodayInRange()" class="min-h-[34px] px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-950/60 text-rose-300 border border-rose-500/40 hover:bg-rose-900/60 transition">
                 ● 현재
               </button>
             </div>
 
             <!-- 수동 연도 선택 -->
-            <div class="flex items-center gap-1 text-[11px]">
-              <select id="startYearSelect" onchange="applyManualYearRange()" class="input-box px-1.5 py-1 rounded text-[11px] font-semibold cursor-pointer"></select>
+            <div class="flex items-center gap-1.5 text-xs">
+              <select id="startYearSelect" onchange="applyManualYearRange()" class="input-box min-h-[34px] px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer flex-1"></select>
               <span class="text-slate-500">~</span>
-              <select id="endYearSelect" onchange="applyManualYearRange()" class="input-box px-1.5 py-1 rounded text-[11px] font-semibold cursor-pointer"></select>
+              <select id="endYearSelect" onchange="applyManualYearRange()" class="input-box min-h-[34px] px-2 py-1 rounded-lg text-xs font-semibold cursor-pointer flex-1"></select>
             </div>
           </div>
         </div>
 
-        <div class="relative h-64 w-full my-3">
+        <div class="relative h-56 sm:h-64 w-full my-3">
           <canvas id="qqqMddHistoryChart"></canvas>
         </div>
 
-        <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <span class="text-slate-400">오늘(최신) MDD: </span>
-            <strong id="rangeTodayMddText" class="text-sky-400">-4.50%</strong>
-            <span class="text-slate-600 mx-1.5">|</span>
-            <span class="text-slate-400">구간 최대: </span>
-            <strong id="rangeMaxMddText" class="text-rose-400">-82.96%</strong>
+        <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 flex flex-col gap-1">
+          <div class="flex flex-wrap items-center justify-between gap-1.5">
+            <div>
+              <span class="text-slate-400">오늘 MDD: </span>
+              <strong id="rangeTodayMddText" class="text-sky-400">-4.50%</strong>
+            </div>
+            <div>
+              <span class="text-slate-400">구간 최대: </span>
+              <strong id="rangeMaxMddText" class="text-rose-400">-82.96%</strong>
+            </div>
           </div>
-          <div class="text-[11px] text-slate-400" id="rangeDateSpanText">1999-03-10 ~ 현재</div>
+          <div class="text-[11px] text-slate-400 break-words" id="rangeDateSpanText">1999-03-10 ~ 현재</div>
         </div>
       </div>
     </section>
 
     <!-- 하단: QQQM MDD 구간별 분할매수 실행 테이블 -->
-    <section class="card p-6">
+    <section class="card p-4 sm:p-6">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
         <div>
-          <h2 class="text-lg font-bold text-white">QQQM MDD 구간별 추가매수 실행 계산기</h2>
-          <p class="text-xs text-slate-400 mt-0.5">현재가 및 전고점 기준으로 목표 매수가 도달 시 <span class="text-emerald-400 font-semibold">초록색 활성 표시</span>가 됩니다.</p>
+          <h2 class="text-base sm:text-lg font-bold text-white">QQQM MDD 구간별 추가매수 실행 계산기</h2>
+          <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">현재가 및 전고점 기준으로 목표 매수가 도달 시 <span class="text-emerald-400 font-semibold">초록색 활성 표시</span>가 됩니다.</p>
         </div>
-        <div class="flex flex-wrap items-center gap-4 text-xs bg-slate-900 px-4 py-2.5 rounded-xl border border-slate-800">
-          <div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 md:flex md:flex-wrap items-center gap-2.5 sm:gap-4 text-xs bg-slate-900 p-3 sm:px-4 sm:py-2.5 rounded-xl border border-slate-800">
+          <div class="flex items-center justify-between sm:block">
             <span class="text-slate-400">도달 구간 누적 투입금: </span>
             <strong id="totalTriggeredCash" class="text-emerald-400 text-sm">$0</strong>
           </div>
-          <div class="h-4 w-[1px] bg-slate-700"></div>
-          <div>
+          <div class="hidden md:block h-4 w-[1px] bg-slate-700"></div>
+          <div class="flex items-center justify-between sm:block">
             <span class="text-slate-400">예상 매수 수량: </span>
             <strong id="totalTriggeredShares" class="text-sky-400 text-sm">0주</strong>
           </div>
-          <div class="h-4 w-[1px] bg-slate-700"></div>
-          <div>
+          <div class="hidden md:block h-4 w-[1px] bg-slate-700"></div>
+          <div class="flex items-center justify-between sm:block">
             <span class="text-slate-400">분할매수 평균단가: </span>
             <strong id="avgBuyPrice" class="text-white text-sm">$0.00</strong>
           </div>
@@ -613,18 +635,18 @@
       </div>
 
       <div class="overflow-x-auto rounded-xl border border-slate-800">
-        <table class="w-full text-left text-xs md:text-sm">
+        <table class="w-full text-left text-xs md:text-sm whitespace-nowrap">
           <thead class="bg-slate-900 text-slate-400 border-b border-slate-800">
             <tr>
-              <th class="py-3 px-4">구간 단계</th>
-              <th class="py-3 px-4">목표 MDD</th>
-              <th class="py-3 px-4">목표 매수가 ($)</th>
-              <th class="py-3 px-4">현재가 대비</th>
-              <th class="py-3 px-4">시드 배분 비중</th>
-              <th class="py-3 px-4">투입 금액 ($)</th>
-              <th class="py-3 px-4">매수 수량 (주)</th>
-              <th class="py-3 px-4">매수 후 예상 평단</th>
-              <th class="py-3 px-4">현재 상태</th>
+              <th class="py-2.5 px-3 sm:py-3 sm:px-4">구간 단계</th>
+              <th class="py-2.5 px-3 sm:py-3 sm:px-4">목표 MDD</th>
+              <th class="py-2.5 px-3 sm:py-3 sm:px-4">목표 매수가 ($)</th>
+              <th class="py-2.5 px-3 sm:py-3 sm:px-4">현재가 대비</th>
+              <th class="py-2.5 px-3 sm:py-3 sm:px-4">시드 배분</th>
+              <th class="py-2.5 px-3 sm:py-3 sm:px-4">투입 금액 ($)</th>
+              <th class="py-2.5 px-3 sm:py-3 sm:px-4">매수 수량 (주)</th>
+              <th class="py-2.5 px-3 sm:py-3 sm:px-4">매수 후 예상 평단</th>
+              <th class="py-2.5 px-3 sm:py-3 sm:px-4">현재 상태</th>
             </tr>
           </thead>
           <tbody id="dcaTableBody" class="divide-y divide-slate-800/80">
@@ -841,7 +863,7 @@
       const fgSliderEl = document.getElementById('fgSlider');
 
       fgBadge.innerText = 'CNN 동기화 중...';
-      fgBadge.className = 'text-[10px] text-amber-300';
+      fgBadge.className = 'text-[11px] text-amber-300 shrink-0';
 
       const parseScore = (jsonObj) => {
         const rawScore = jsonObj?.fear_and_greed?.score;
@@ -875,7 +897,7 @@
           fgInputEl.value = score;
           fgSliderEl.value = score;
           fgBadge.innerText = 'CNN 자동 반영';
-          fgBadge.className = 'text-[10px] text-emerald-400 font-semibold';
+          fgBadge.className = 'text-[11px] text-emerald-400 font-semibold shrink-0';
           return `CNN 공포·탐욕(${score})`;
         }
 
@@ -883,7 +905,7 @@
       } catch (err) {
         console.warn('CNN 공포·탐욕지수 자동 조회 실패:', err);
         fgBadge.innerText = '수동 입력 유지';
-        fgBadge.className = 'text-[10px] text-slate-400';
+        fgBadge.className = 'text-[11px] text-slate-400 shrink-0';
         return null;
       }
     }
@@ -892,7 +914,7 @@
     async function fetchSheetData() {
       const vixBadge = document.getElementById('vixSourceBadge');
       vixBadge.innerText = '구글시트 동기화 중...';
-      vixBadge.className = 'text-[10px] text-amber-300';
+      vixBadge.className = 'text-[11px] text-amber-300 truncate';
 
       const cacheBusterUrl = `${GOOGLE_SHEET_VIX_CSV_URL}&t=${Date.now()}`;
 
@@ -971,11 +993,11 @@
           document.getElementById('vixInput').value = extractedVix.toFixed(2);
           document.getElementById('vixSlider').value = extractedVix.toFixed(2);
           vixBadge.innerText = extractedDate ? `시트 A-B (${extractedDate})` : '시트 A열 VIX → B열 반영';
-          vixBadge.className = 'text-[10px] text-emerald-400 font-semibold';
+          vixBadge.className = 'text-[11px] text-emerald-400 font-semibold truncate';
           summaryParts.push(`VIX(${extractedVix.toFixed(2)})`);
         } else {
           vixBadge.innerText = 'A열 VIX 확인 필요 (수동)';
-          vixBadge.className = 'text-[10px] text-rose-400';
+          vixBadge.className = 'text-[11px] text-rose-400 truncate';
         }
 
         // 2) 은퇴자산관리 15행(인덱스 14) 데이터 추출
@@ -1012,7 +1034,7 @@
       } catch (err) {
         console.warn('구글 시트 연동 실패:', err);
         vixBadge.innerText = 'A열 VIX 확인 필요 (수동)';
-        vixBadge.className = 'text-[10px] text-rose-400';
+        vixBadge.className = 'text-[11px] text-rose-400 truncate';
         return null;
       }
     }
@@ -1073,7 +1095,7 @@
 
           const changeEl = document.getElementById('priceChangeLabel');
           changeEl.innerText = `${pctChange >= 0 ? '+' : ''}${pctChange.toFixed(2)}%`;
-          changeEl.className = `text-[10px] font-bold ${pctChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+          changeEl.className = `text-[11px] font-bold shrink-0 ${pctChange >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
           updatedItems.push(`QQQM 현재가($${livePrice.toFixed(2)})`);
         }
 
@@ -1165,14 +1187,14 @@
         const timeStr = now.toLocaleString('ko-KR');
         document.getElementById('lastUpdatedText').innerText = `마지막 동기화: ${timeStr} (${updatedItems.join(', ') || '완료'})`;
 
-        badge.className = 'px-2.5 py-1 text-xs font-bold bg-emerald-500/20 text-emerald-400 rounded-md border border-emerald-500/30';
+        badge.className = 'px-2.5 py-1 text-xs font-bold rounded-md bg-emerald-500/20 text-emerald-400 rounded-md border border-emerald-500/30';
         badge.innerText = '🟢 실시간 API · 구글시트 연동됨';
 
       } catch (err) {
         console.error('데이터 연동 오류:', err);
-        badge.className = 'px-2.5 py-1 text-xs font-bold bg-rose-500/20 text-rose-400 rounded-md border border-rose-500/30';
+        badge.className = 'px-2.5 py-1 text-xs font-bold rounded-md bg-rose-500/20 text-rose-400 rounded-md border border-rose-500/30';
         badge.innerText = '⚠️ 일부 통신 오류 (수동 보정 가능)';
-        showAlert(`⚠️ 일부 데이터를 불러오는 중 네트워크 또는 API 호출 제한이 발생했습니다. 하단 입력칸에서 수치를 직접 조절하실 수 있습니다.`);
+        showAlert(`⚠️ 일부 데이터를 불러오는 중 네트워크 또는 API 호출 제한이 발생했습니다. 입력칸에서 수치를 직접 조절하실 수 있습니다.`);
       } finally {
         refreshBtn.disabled = false;
         refreshBtn.classList.remove('opacity-60');
@@ -1315,7 +1337,7 @@
         qqqMddChartInstance.data.datasets[2].data = new Array(labels.length).fill(-20);
         qqqMddChartInstance.data.datasets[3].data = new Array(labels.length).fill(-30);
         qqqMddChartInstance.options.scales.y.min = minFloor;
-        qqqMddChartInstance.options.scales.x.ticks.maxTicksLimit = dailyDetailEnabled ? 12 : 7;
+        qqqMddChartInstance.options.scales.x.ticks.maxTicksLimit = dailyDetailEnabled ? 10 : 5;
 
         qqqMddChartInstance.update();
 
@@ -1390,13 +1412,13 @@
 
       const dPnlEl = document.getElementById('posDollarPnlValue');
       dPnlEl.innerText = `${dollarPnl >= 0 ? '+' : '-'}$${formatCommaNumber(Math.abs(dollarPnl), 2)} (${dollarReturnPct >= 0 ? '+' : ''}${dollarReturnPct.toFixed(2)}%)`;
-      dPnlEl.className = `text-lg font-extrabold mt-1 ${dollarPnl > 0 ? 'text-emerald-400' : dollarPnl < 0 ? 'text-rose-400' : 'text-slate-200'}`;
+      dPnlEl.className = `text-base sm:text-lg font-extrabold mt-1 break-words ${dollarPnl > 0 ? 'text-emerald-400' : dollarPnl < 0 ? 'text-rose-400' : 'text-slate-200'}`;
       document.getElementById('posMarketValText').innerText =
         `평가금 $${formatCommaNumber(marketValueUsd, 2)} · 평단 $${formatCommaNumber(effectiveAvgPrice, 2)}`;
 
       const kPnlEl = document.getElementById('posKrwPnlValue');
       kPnlEl.innerText = `${krwPnl >= 0 ? '+' : '-'}₩${formatCommaNumber(Math.abs(krwPnl), 0)} (${krwReturnPct >= 0 ? '+' : ''}${krwReturnPct.toFixed(2)}%)`;
-      kPnlEl.className = `text-lg font-extrabold mt-1 ${krwPnl > 0 ? 'text-emerald-400' : krwPnl < 0 ? 'text-rose-400' : 'text-slate-200'}`;
+      kPnlEl.className = `text-base sm:text-lg font-extrabold mt-1 break-words ${krwPnl > 0 ? 'text-emerald-400' : krwPnl < 0 ? 'text-rose-400' : 'text-slate-200'}`;
       document.getElementById('posFxDiffText').innerText =
         `매입환율 ${formatCommaNumber(Math.round(effectiveBuyFx), 0)}원 → 현재 ${formatCommaNumber(currentFx, 0)}원 (${fxDeltaPct >= 0 ? '+' : ''}${fxDeltaPct.toFixed(2)}%)`;
 
@@ -1408,10 +1430,10 @@
       if (effectiveAvgPrice > 0) {
         const vsAvgPct = ((price - effectiveAvgPrice) / effectiveAvgPrice) * 100;
         vsAvgEl.innerText = `${vsAvgPct >= 0 ? '+' : ''}${vsAvgPct.toFixed(2)}%`;
-        vsAvgEl.className = `text-lg font-extrabold mt-1 ${vsAvgPct >= 0 ? 'text-emerald-400' : 'text-amber-300'}`;
+        vsAvgEl.className = `text-base sm:text-lg font-extrabold mt-1 ${vsAvgPct >= 0 ? 'text-emerald-400' : 'text-amber-300'}`;
       } else {
         vsAvgEl.innerText = '-';
-        vsAvgEl.className = 'text-lg font-extrabold mt-1 text-slate-400';
+        vsAvgEl.className = 'text-base sm:text-lg font-extrabold mt-1 text-slate-400';
       }
 
       return {
@@ -1441,22 +1463,22 @@
       if (disparityPct <= -10) {
         smaBadgeEl.innerText = '200일선 -10%↓ 투매권';
         smaBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500/20 text-rose-400';
-        dispEl.className = 'text-3xl font-extrabold text-rose-400';
+        dispEl.className = 'text-2xl sm:text-3xl font-extrabold text-rose-400';
         smaDescEl.innerText = '장기 추세선 대비 큰 폭의 할인 구간 · 역발상 분할매수 매력 높음';
       } else if (disparityPct < 0) {
         smaBadgeEl.innerText = '200일선 하회';
         smaBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 text-orange-400';
-        dispEl.className = 'text-3xl font-extrabold text-orange-400';
+        dispEl.className = 'text-2xl sm:text-3xl font-extrabold text-orange-400';
         smaDescEl.innerText = '장기 추세선(200일 이평선) 아래 구간 · 하회 폭 확대 시 분할매수 유리';
       } else if (disparityPct <= 8) {
         smaBadgeEl.innerText = '200일선 상회 (안정)';
         smaBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400';
-        dispEl.className = 'text-3xl font-extrabold text-emerald-400';
+        dispEl.className = 'text-2xl sm:text-3xl font-extrabold text-emerald-400';
         smaDescEl.innerText = '장기 상승 추세 유지 구간 · 200일선 부근 눌림목 여부 확인';
       } else {
         smaBadgeEl.innerText = '200일선 이격 과열';
         smaBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-sky-500/20 text-sky-400';
-        dispEl.className = 'text-3xl font-extrabold text-sky-300';
+        dispEl.className = 'text-2xl sm:text-3xl font-extrabold text-sky-300';
         smaDescEl.innerText = '200일선 대비 이격도가 높음 · 추격매수보다 조정 대기 권장';
       }
 
@@ -1486,22 +1508,22 @@
       if (rsiVal <= 30) {
         rsiBadgeEl.innerText = '단기 과매도 (30↓)';
         rsiBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400';
-        rsiEl.className = 'text-3xl font-extrabold text-emerald-400';
+        rsiEl.className = 'text-2xl sm:text-3xl font-extrabold text-emerald-400';
         rsiDescEl.innerText = 'RSI 30 이하 단기 과매도 구간 진입 · 기술적 반등 및 분할매수 우호 신호';
       } else if (rsiVal <= 45) {
         rsiBadgeEl.innerText = '약세 / 매도 우위';
         rsiBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300';
-        rsiEl.className = 'text-3xl font-extrabold text-amber-300';
+        rsiEl.className = 'text-2xl sm:text-3xl font-extrabold text-amber-300';
         rsiDescEl.innerText = '단기 모멘텀 둔화 구간 · RSI 30 근접 시 분할매수 타이밍 포착';
       } else if (rsiVal < 70) {
         rsiBadgeEl.innerText = '중립 / 양호';
         rsiBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-sky-500/20 text-sky-400';
-        rsiEl.className = 'text-3xl font-extrabold text-sky-300';
+        rsiEl.className = 'text-2xl sm:text-3xl font-extrabold text-sky-300';
         rsiDescEl.innerText = '과매도·과매수 어느 쪽에도 치우치지 않은 중립 구간입니다.';
       } else {
         rsiBadgeEl.innerText = '단기 과매수 (70↑)';
         rsiBadgeEl.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500/20 text-rose-400';
-        rsiEl.className = 'text-3xl font-extrabold text-rose-400';
+        rsiEl.className = 'text-2xl sm:text-3xl font-extrabold text-rose-400';
         rsiDescEl.innerText = 'RSI 70 이상 단기 과열 구간 · 신규 추가매수는 신중히 접근';
       }
     }
@@ -1545,19 +1567,19 @@
       if (absMdd >= 30) {
         mddBadge.innerText = '30%+ 폭락장';
         mddBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-rose-500/20 text-rose-400';
-        mddValueEl.className = 'text-4xl font-extrabold text-rose-400';
+        mddValueEl.className = 'text-3xl sm:text-4xl font-extrabold text-rose-400';
       } else if (absMdd >= 20) {
         mddBadge.innerText = '20%+ 약세장';
         mddBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/20 text-orange-400';
-        mddValueEl.className = 'text-4xl font-extrabold text-orange-400';
+        mddValueEl.className = 'text-3xl sm:text-4xl font-extrabold text-orange-400';
       } else if (absMdd >= 10) {
         mddBadge.innerText = '10%+ 조정장';
         mddBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-amber-500/20 text-amber-300';
-        mddValueEl.className = 'text-4xl font-extrabold text-amber-300';
+        mddValueEl.className = 'text-3xl sm:text-4xl font-extrabold text-amber-300';
       } else {
         mddBadge.innerText = '정상 / 강세 구간';
         mddBadge.className = 'px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-500/20 text-emerald-400';
-        mddValueEl.className = 'text-4xl font-extrabold text-emerald-400';
+        mddValueEl.className = 'text-3xl sm:text-4xl font-extrabold text-emerald-400';
       }
       document.getElementById('mddBar').style.width = `${Math.min(100, (absMdd / 35) * 100)}%`;
 
@@ -1678,21 +1700,21 @@
           : 'bg-slate-950/30 hover:bg-slate-900/60 transition-colors';
 
         tr.innerHTML = `
-          <td class="py-3 px-4 font-semibold ${isTriggered ? 'text-emerald-300' : 'text-slate-200'}">${tier.name}</td>
-          <td class="py-3 px-4 font-bold text-rose-400">-${(tier.drop * 100).toFixed(0)}%</td>
-          <td class="py-3 px-4 font-bold text-white">$${formatCommaNumber(targetPrice, 2)}</td>
-          <td class="py-3 px-4 text-xs ${isTriggered ? 'text-emerald-400 font-semibold' : 'text-slate-400'}">
+          <td class="py-2.5 px-3 sm:py-3 sm:px-4 font-semibold ${isTriggered ? 'text-emerald-300' : 'text-slate-200'}">${tier.name}</td>
+          <td class="py-2.5 px-3 sm:py-3 sm:px-4 font-bold text-rose-400">-${(tier.drop * 100).toFixed(0)}%</td>
+          <td class="py-2.5 px-3 sm:py-3 sm:px-4 font-bold text-white">$${formatCommaNumber(targetPrice, 2)}</td>
+          <td class="py-2.5 px-3 sm:py-3 sm:px-4 text-xs ${isTriggered ? 'text-emerald-400 font-semibold' : 'text-slate-400'}">
             ${isTriggered ? '목표가 도달 완료' : `${diffPct.toFixed(1)}% 추가 하락 시`}
           </td>
-          <td class="py-3 px-4 text-slate-300">${(tier.weight * 100).toFixed(0)}%</td>
-          <td class="py-3 px-4 font-semibold text-slate-200">$${formatCommaNumber(allocCash, 0)}</td>
-          <td class="py-3 px-4 text-sky-300 font-medium">${formatCommaNumber(shares, 2)}주</td>
-          <td class="py-3 px-4 text-amber-200 font-semibold">$${formatCommaNumber(projectedAvgPrice, 2)}</td>
-          <td class="py-3 px-4">
+          <td class="py-2.5 px-3 sm:py-3 sm:px-4 text-slate-300">${(tier.weight * 100).toFixed(0)}%</td>
+          <td class="py-2.5 px-3 sm:py-3 sm:px-4 font-semibold text-slate-200">$${formatCommaNumber(allocCash, 0)}</td>
+          <td class="py-2.5 px-3 sm:py-3 sm:px-4 text-sky-300 font-medium">${formatCommaNumber(shares, 2)}주</td>
+          <td class="py-2.5 px-3 sm:py-3 sm:px-4 text-amber-200 font-semibold">$${formatCommaNumber(projectedAvgPrice, 2)}</td>
+          <td class="py-2.5 px-3 sm:py-3 sm:px-4">
             ${
               isTriggered
-                ? '<span class="px-2.5 py-1 text-xs font-bold rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">● 매수 활성</span>'
-                : '<span class="px-2.5 py-1 text-xs font-medium rounded-md bg-slate-800 text-slate-400">대기 중</span>'
+                ? '<span class="px-2 py-1 text-xs font-bold rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">● 매수 활성</span>'
+                : '<span class="px-2 py-1 text-xs font-medium rounded-md bg-slate-800 text-slate-400">대기 중</span>'
             }
           </td>
         `;
@@ -1799,7 +1821,7 @@
               ticks: {
                 color: '#94a3b8',
                 font: { size: 10 },
-                maxTicksLimit: 7
+                maxTicksLimit: 5
               },
               grid: { color: 'rgba(30, 41, 59, 0.35)' }
             },
@@ -1815,7 +1837,7 @@
                   if (v === -30) return '#f43f5e';
                   return '#94a3b8';
                 },
-                font: { size: 11, weight: 'bold' },
+                font: { size: 10, weight: 'bold' },
                 callback: (val) => val === 0 ? '0%' : `${Math.abs(val)}% (${val}%)`
               },
               grid: {
