@@ -182,8 +182,9 @@
           <input type="number" id="posSharesInput" step="0.01" min="0" value="0" oninput="recalculateAll()" class="input-box w-full px-2.5 py-1.5 rounded-lg text-sm font-bold text-white" />
         </div>
         <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-          <label for="posPrincipalInput" class="block text-[11px] text-slate-400 mb-1">투자원금 ($)</label>
+          <label for="posPrincipalInput" class="block text-[11px] text-slate-400 mb-1">투자원금 ($ · ₩)</label>
           <input type="number" id="posPrincipalInput" step="0.01" min="0" value="0" oninput="recalculateAll()" class="input-box w-full px-2.5 py-1.5 rounded-lg text-sm font-bold text-emerald-300" />
+          <div id="posPrincipalKrwSub" class="text-[11px] text-emerald-200/80 font-medium mt-1 truncate">원화: ₩0</div>
         </div>
         <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
           <label for="posAvgPriceInput" class="block text-[11px] text-slate-400 mb-1">평균매수가 ($)</label>
@@ -193,9 +194,16 @@
           <label for="posBuyFxInput" class="block text-[11px] text-slate-400 mb-1">매입환율 (원/$)</label>
           <input type="number" id="posBuyFxInput" step="1" min="0" value="1380" oninput="recalculateAll()" class="input-box w-full px-2.5 py-1.5 rounded-lg text-sm font-bold text-amber-300" />
         </div>
-        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 col-span-2 sm:col-span-1">
-          <label for="posAnnualDivInput" class="block text-[11px] text-slate-400 mb-1">연배당금 ($/년)</label>
-          <input type="number" id="posAnnualDivInput" step="0.01" min="0" value="0" oninput="recalculateAll()" class="input-box w-full px-2.5 py-1.5 rounded-lg text-sm font-bold text-teal-300" />
+        <div class="bg-gradient-to-br from-sky-950/45 via-slate-900/80 to-slate-900/60 p-3 rounded-xl border border-sky-500/40 col-span-2 sm:col-span-1 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-1">
+            <span class="text-[11px] font-semibold text-sky-300">총자산 ($ · ₩)</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-200 font-medium">현재가 기준</span>
+          </div>
+          <div id="posTotalAssetUsd" class="text-base sm:text-lg font-extrabold text-white tracking-tight tabular-nums truncate">$0.00</div>
+          <div class="flex items-center justify-between gap-1.5 bg-slate-950/75 border border-slate-800/90 px-2.5 py-1 rounded-lg">
+            <span class="text-[10px] text-slate-400 shrink-0">원화 환산</span>
+            <span id="posTotalAssetKrw" class="text-xs font-extrabold text-amber-300 tabular-nums truncate">₩0</span>
+          </div>
         </div>
       </div>
 
@@ -651,6 +659,7 @@
     let qqqmDailyCloses = [];
     let qqqmSma200Live = 270.75;
     let liveUsdKrwRate = 1400;
+    let annualDividendValue = 0;
     let isSyncingAll = false;
     let lastAutoSyncAt = 0;
 
@@ -954,7 +963,7 @@
           if (!isNaN(principalVal)) document.getElementById('posPrincipalInput').value = principalVal;
           if (!isNaN(avgPriceVal)) document.getElementById('posAvgPriceInput').value = avgPriceVal;
           if (!isNaN(buyFxVal) && buyFxVal > 0) document.getElementById('posBuyFxInput').value = Math.round(buyFxVal);
-          if (!isNaN(annualDivVal)) document.getElementById('posAnnualDivInput').value = annualDivVal;
+          if (!isNaN(annualDivVal)) annualDividendValue = annualDivVal;
 
           document.getElementById('posRow15RawEcho').innerText =
             `15행 자동 반영: ${row15.filter(Boolean).join(' | ')}`;
@@ -1320,7 +1329,7 @@
       const principalInput = Math.max(0, parseFloat(document.getElementById('posPrincipalInput').value) || 0);
       const avgPriceInput = Math.max(0, parseFloat(document.getElementById('posAvgPriceInput').value) || 0);
       const buyFx = Math.max(0, parseFloat(document.getElementById('posBuyFxInput').value) || currentFx);
-      const annualDiv = Math.max(0, parseFloat(document.getElementById('posAnnualDivInput').value) || 0);
+      const annualDiv = Math.max(0, annualDividendValue || 0);
 
       const effectiveAvgPrice = avgPriceInput > 0 ? avgPriceInput : (shares > 0 && principalInput > 0 ? principalInput / shares : 0);
       const effectivePrincipal = principalInput > 0 ? principalInput : (shares > 0 && effectiveAvgPrice > 0 ? shares * effectiveAvgPrice : 0);
@@ -1334,6 +1343,10 @@
       const krwPnl = marketValueKrw - principalKrw;
       const krwReturnPct = principalKrw > 0 ? (krwPnl / principalKrw) * 100 : 0;
       const fxDeltaPct = effectiveBuyFx > 0 ? ((currentFx - effectiveBuyFx) / effectiveBuyFx) * 100 : 0;
+
+      document.getElementById('posPrincipalKrwSub').innerText = `원화: ₩${formatCommaNumber(principalKrw, 0)}`;
+      document.getElementById('posTotalAssetUsd').innerText = `$${formatCommaNumber(marketValueUsd, 2)}`;
+      document.getElementById('posTotalAssetKrw').innerText = `₩${formatCommaNumber(marketValueKrw, 0)}`;
 
       const yocPct = effectivePrincipal > 0 ? (annualDiv / effectivePrincipal) * 100 : 0;
       const divBuyableShares = price > 0 ? annualDiv / price : 0;
