@@ -76,7 +76,7 @@
         </p>
       </div>
 
-      <!-- 컨트롤 버튼 그룹 (모바일 터치 친화적 2열 그리드/플렉스) -->
+      <!-- 컨트롤 버튼 그룹 -->
       <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
         <button onclick="fetchLiveMarketData()" id="refreshBtn" class="col-span-2 sm:col-span-auto px-4 py-2.5 sm:py-2 text-xs font-bold rounded-xl bg-sky-600 hover:bg-sky-500 active:scale-[0.99] text-white transition flex items-center justify-center gap-1.5 shadow-lg shadow-sky-900/30">
           <span>🔄</span> 실시간 API · 시트 갱신
@@ -162,7 +162,7 @@
       </div>
     </section>
 
-    <!-- 내 QQQM 보유 포지션 (은퇴자산관리 15행 연동 + 수동 조정 가능) -->
+    <!-- 내 QQQM 보유 포지션 -->
     <section class="card p-4 sm:p-5">
       <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5 mb-4">
         <div>
@@ -180,7 +180,6 @@
         </div>
       </div>
 
-      <!-- 5개 포지션 입력 필드 -->
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
         <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
           <label for="posSharesInput" class="block text-[11px] text-slate-400 mb-1">내보유수량 (주)</label>
@@ -204,7 +203,6 @@
         </div>
       </div>
 
-      <!-- 4개 포지션 분석 요약 카드 -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
         <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
           <div class="text-slate-400">달러 기준 평가손익</div>
@@ -231,7 +229,6 @@
 
     <!-- 4대 핵심 지표 카드 -->
     <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-      <!-- 1. QQQM MDD 카드 -->
       <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between gap-2">
@@ -261,7 +258,6 @@
         </div>
       </div>
 
-      <!-- 2. VIX 변동성 지수 카드 -->
       <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between gap-2">
@@ -287,7 +283,6 @@
         </div>
       </div>
 
-      <!-- 3. CNN 공포·탐욕 지수 카드 -->
       <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between gap-2">
@@ -313,7 +308,6 @@
         </div>
       </div>
 
-      <!-- 4. 종합 추가매수 매력도 점수 카드 -->
       <div class="card p-4 sm:p-5 flex flex-col justify-between border-sky-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950/30">
         <div>
           <div class="flex items-center justify-between gap-2">
@@ -335,9 +329,8 @@
       </div>
     </section>
 
-    <!-- 기술적 보조 지표 바: QQQM 200일 이동평균선 이격도 & RSI(14일) -->
+    <!-- 기술적 보조 지표 바 -->
     <section class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-      <!-- 1. QQQM 200일 이동평균선 이격도 카드 -->
       <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
           <div class="flex flex-wrap items-center justify-between gap-2">
@@ -376,7 +369,6 @@
         </div>
       </div>
 
-      <!-- 2. QQQM RSI (14일 상대강도지수) 카드 -->
       <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
           <div class="flex flex-wrap items-center justify-between gap-2">
@@ -421,7 +413,6 @@
 
     <!-- 중단: QQQ 장기 역사적 하락장 확률 통계 + QQQ 역사적 MDD 추이 차트 -->
     <section class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
-      <!-- 좌측 7컬럼: QQQ (1999~현재) 기반 10% 조정장 / 20% 약세장 / 30% 폭락장 확률 데이터 -->
       <div class="card p-4 sm:p-6 lg:col-span-7 flex flex-col justify-between">
         <div>
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
@@ -434,9 +425,7 @@
             </span>
           </div>
 
-          <!-- 3대 하락장 확률 카드 -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-5">
-            <!-- 10% 조정장 -->
             <div id="regimeCard10" class="p-4 rounded-xl bg-slate-900/80 border border-amber-500/30 transition-all">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-amber-400">10% 조정장</span>
@@ -454,7 +443,6 @@
               </div>
             </div>
 
-            <!-- 20% 약세장 -->
             <div id="regimeCard20" class="p-4 rounded-xl bg-slate-900/80 border border-orange-500/30 transition-all">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-orange-400">20% 약세장</span>
@@ -472,7 +460,6 @@
               </div>
             </div>
 
-            <!-- 30% 폭락장 -->
             <div id="regimeCard30" class="p-4 rounded-xl bg-slate-900/80 border border-rose-500/30 transition-all">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-rose-400">30% 폭락장</span>
@@ -491,7 +478,6 @@
             </div>
           </div>
 
-          <!-- 조건부 심화 확률 테이블 -->
           <div class="overflow-x-auto rounded-xl border border-slate-800">
             <table class="w-full text-left text-xs min-w-[520px]">
               <thead class="bg-slate-900 text-slate-400 border-b border-slate-800">
@@ -535,7 +521,7 @@
         </p>
       </div>
 
-      <!-- 우측 5컬럼: QQQ 역사적 MDD 추이 차트 (원본 레이아웃 유지) -->
+      <!-- 우측 5컬럼: QQQ 역사적 MDD 추이 차트 (레이아웃 유지) -->
       <div class="card p-4 sm:p-6 lg:col-span-5 flex flex-col justify-between">
         <div>
           <div class="flex flex-wrap items-center justify-between gap-2">
@@ -546,7 +532,6 @@
             <span id="qqqChartStatus" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">1999~현재 일 단위</span>
           </div>
 
-          <!-- 기간 프리셋 버튼 & 수동 연도 범위 컨트롤 -->
           <div class="mt-3 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col gap-2">
             <div class="flex flex-wrap items-center gap-1.5">
               <button id="btnRange5y" onclick="setChartPreset('5y')" class="period-btn px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
@@ -566,7 +551,6 @@
               </button>
             </div>
 
-            <!-- 수동 연도 선택 -->
             <div class="flex items-center justify-between gap-2 text-xs pt-1 border-t border-slate-800/80">
               <span class="text-[11px] text-slate-400">연도 구간</span>
               <div class="flex items-center gap-1.5">
@@ -598,32 +582,40 @@
       </div>
     </section>
 
-    <!-- 하단: QQQM MDD 구간별 분할매수 실행 테이블 -->
+    <!-- 하단: QQQM MDD 구간별 분할매수 실행 계산기 (갤럭시 S26 울트라 최적화) -->
     <section class="card p-4 sm:p-6">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3.5 mb-4">
         <div>
           <h2 class="text-base sm:text-lg font-bold text-white">QQQM MDD 구간별 추가매수 실행 계산기</h2>
-          <p class="text-xs text-slate-400 mt-0.5">현재가 및 전고점 기준으로 목표 매수가 도달 시 <span class="text-emerald-400 font-semibold">초록색 활성 표시</span>가 됩니다.</p>
+          <p class="text-[11px] sm:text-xs text-slate-400 mt-0.5 leading-relaxed">
+            현재가 및 전고점 기준으로 목표 매수가 도달 시 <span class="text-emerald-400 font-semibold">초록색 활성 표시</span>가 됩니다.
+          </p>
         </div>
-        <div class="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-2 sm:gap-4 text-xs bg-slate-900 p-3 sm:px-4 sm:py-2.5 rounded-xl border border-slate-800">
-          <div>
-            <span class="text-[11px] text-slate-400 block sm:inline">누적 투입금: </span>
-            <strong id="totalTriggeredCash" class="text-emerald-400 text-xs sm:text-sm">$0</strong>
+        <div class="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-2 sm:gap-4 text-xs bg-slate-900/95 p-3 sm:px-4 sm:py-2.5 rounded-xl border border-slate-800">
+          <div class="min-w-0">
+            <span class="text-[10px] sm:text-[11px] text-slate-400 block sm:inline">누적 투입금</span>
+            <strong id="totalTriggeredCash" class="text-emerald-400 text-xs sm:text-sm font-extrabold block sm:inline truncate">$0</strong>
           </div>
           <div class="hidden sm:block h-4 w-[1px] bg-slate-700"></div>
-          <div>
-            <span class="text-[11px] text-slate-400 block sm:inline">매수 수량: </span>
-            <strong id="totalTriggeredShares" class="text-sky-400 text-xs sm:text-sm">0주</strong>
+          <div class="min-w-0">
+            <span class="text-[10px] sm:text-[11px] text-slate-400 block sm:inline">매수 수량</span>
+            <strong id="totalTriggeredShares" class="text-sky-400 text-xs sm:text-sm font-extrabold block sm:inline truncate">0주</strong>
           </div>
           <div class="hidden sm:block h-4 w-[1px] bg-slate-700"></div>
-          <div>
-            <span class="text-[11px] text-slate-400 block sm:inline">평균단가: </span>
-            <strong id="avgBuyPrice" class="text-white text-xs sm:text-sm">$0.00</strong>
+          <div class="min-w-0">
+            <span class="text-[10px] sm:text-[11px] text-slate-400 block sm:inline">평균단가</span>
+            <strong id="avgBuyPrice" class="text-white text-xs sm:text-sm font-extrabold block sm:inline truncate">$0.00</strong>
           </div>
         </div>
       </div>
 
-      <div class="overflow-x-auto rounded-xl border border-slate-800">
+      <!-- 갤럭시 S26 울트라 세로 화면용 카드형 리스트 (sm 미만 노출) -->
+      <div id="dcaMobileCards" class="grid grid-cols-1 gap-3 sm:hidden">
+        <!-- JS로 동적 생성 -->
+      </div>
+
+      <!-- 태블릿/데스크톱 테이블 뷰 (sm 이상 노출) -->
+      <div class="hidden sm:block overflow-x-auto rounded-xl border border-slate-800">
         <table class="w-full text-left text-xs md:text-sm min-w-[680px]">
           <thead class="bg-slate-900 text-slate-400 border-b border-slate-800">
             <tr>
@@ -1013,7 +1005,6 @@
       return null;
     }
 
-    // 첫 화면 진입 시 달러/원 환율 및 구글 시트 데이터를 최우선으로 즉시 자동 갱신
     async function autoRefreshUsdKrwAndSheetOnLoad() {
       const [fetchedUsdKrw, sheetSummary] = await Promise.all([
         fetchTwelveDataUsdKrw(),
@@ -1632,7 +1623,9 @@
       }
 
       const tbody = document.getElementById('dcaTableBody');
+      const mobileCardsContainer = document.getElementById('dcaMobileCards');
       tbody.innerHTML = '';
+      mobileCardsContainer.innerHTML = '';
 
       let triggeredCash = 0;
       let triggeredShares = 0;
@@ -1660,6 +1653,50 @@
           triggeredWeight += tier.weight * 100;
         }
 
+        const statusBadgeHtml = isTriggered
+          ? '<span class="px-2.5 py-1 text-[11px] font-bold rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">● 매수 활성</span>'
+          : '<span class="px-2.5 py-1 text-[11px] font-medium rounded-md bg-slate-800 text-slate-400 shrink-0">대기 중</span>';
+
+        const diffText = isTriggered ? '목표가 도달 완료' : `${diffPct.toFixed(1)}% 추가 하락 시`;
+
+        // 갤럭시 S26 울트라 세로 화면 카드
+        const cardDiv = document.createElement('div');
+        cardDiv.className = isTriggered
+          ? 'p-3.5 rounded-xl bg-emerald-950/35 border border-emerald-500/40 space-y-2.5'
+          : 'p-3.5 rounded-xl bg-slate-900/75 border border-slate-800 space-y-2.5';
+
+        cardDiv.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <div class="text-sm font-bold ${isTriggered ? 'text-emerald-300' : 'text-white'}">${tier.name}</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">
+                목표 MDD <strong class="text-rose-400">-${(tier.drop * 100).toFixed(0)}%</strong> · 시드 비중 <strong class="text-slate-200">${(tier.weight * 100).toFixed(0)}%</strong>
+              </div>
+            </div>
+            ${statusBadgeHtml}
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-xs bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80">
+            <div>
+              <span class="text-[10px] text-slate-400 block">목표 매수가</span>
+              <strong class="text-sm font-extrabold text-white">$${formatCommaNumber(targetPrice, 2)}</strong>
+              <span class="block text-[10px] ${isTriggered ? 'text-emerald-400' : 'text-slate-500'}">${diffText}</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block">구간 투입금</span>
+              <strong class="text-sm font-extrabold text-emerald-400">$${formatCommaNumber(allocCash, 0)}</strong>
+              <span class="block text-[10px] text-sky-300">예상 ${formatCommaNumber(shares, 2)}주</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] pt-0.5">
+            <span class="text-slate-400">누적 매수 후 예상 평단</span>
+            <strong class="text-xs font-bold text-amber-200">$${formatCommaNumber(projectedAvgPrice, 2)}</strong>
+          </div>
+        `;
+        mobileCardsContainer.appendChild(cardDiv);
+
+        // 데스크톱 테이블 행
         const tr = document.createElement('tr');
         tr.className = isTriggered
           ? 'bg-emerald-950/35 hover:bg-emerald-900/40 transition-colors'
@@ -1670,19 +1707,13 @@
           <td class="py-3 px-3.5 font-bold text-rose-400">-${(tier.drop * 100).toFixed(0)}%</td>
           <td class="py-3 px-3.5 font-bold text-white">$${formatCommaNumber(targetPrice, 2)}</td>
           <td class="py-3 px-3.5 text-xs ${isTriggered ? 'text-emerald-400 font-semibold' : 'text-slate-400'}">
-            ${isTriggered ? '목표가 도달 완료' : `${diffPct.toFixed(1)}% 추가 하락 시`}
+            ${diffText}
           </td>
           <td class="py-3 px-3.5 text-slate-300">${(tier.weight * 100).toFixed(0)}%</td>
           <td class="py-3 px-3.5 font-semibold text-slate-200">$${formatCommaNumber(allocCash, 0)}</td>
           <td class="py-3 px-3.5 text-sky-300 font-medium">${formatCommaNumber(shares, 2)}주</td>
           <td class="py-3 px-3.5 text-amber-200 font-semibold">$${formatCommaNumber(projectedAvgPrice, 2)}</td>
-          <td class="py-3 px-3.5">
-            ${
-              isTriggered
-                ? '<span class="px-2.5 py-1 text-xs font-bold rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">● 매수 활성</span>'
-                : '<span class="px-2.5 py-1 text-xs font-medium rounded-md bg-slate-800 text-slate-400">대기 중</span>'
-            }
-          </td>
+          <td class="py-3 px-3.5">${statusBadgeHtml}</td>
         `;
         tbody.appendChild(tr);
       });
