@@ -76,7 +76,7 @@
         </p>
       </div>
 
-      <!-- 컨트롤 버튼 그룹 -->
+      <!-- 컨트롤 버튼 그룹 (모바일 터치 친화적 2열 그리드/플렉스) -->
       <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
         <button onclick="fetchLiveMarketData()" id="refreshBtn" class="col-span-2 sm:col-span-auto px-4 py-2.5 sm:py-2 text-xs font-bold rounded-xl bg-sky-600 hover:bg-sky-500 active:scale-[0.99] text-white transition flex items-center justify-center gap-1.5 shadow-lg shadow-sky-900/30">
           <span>🔄</span> 실시간 API · 시트 갱신
@@ -106,7 +106,7 @@
         <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-sky-400"></span> 실시간 데이터 및 시뮬레이션 입력
         </h2>
-        <span class="text-[11px] sm:text-xs text-slate-400">첫 화면 진입 시 자동 반영되며 직접 수정도 가능합니다.</span>
+        <span class="text-[11px] sm:text-xs text-slate-400">자동 반영되며 직접 수정도 가능합니다.</span>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 sm:gap-4">
@@ -170,7 +170,7 @@
             <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 내 QQQM 보유 포지션 & 배당/환율 인사이트
           </h2>
           <p class="text-xs text-slate-400 mt-1 leading-relaxed">
-            첫 화면 진입 시 구글 스프레드시트 <strong class="text-emerald-300">은퇴자산관리 15행</strong>과 달러/원 환율을 자동 갱신하며, 직접 입력 시 손익·환율·YOC·분할매수 후 평단가가 즉시 갱신됩니다.
+            구글 스프레드시트 <strong class="text-emerald-300">은퇴자산관리 15행</strong>에서 자동 불러오며, 직접 입력 시 손익·환율·YOC·분할매수 후 평단가가 즉시 갱신됩니다.
           </p>
         </div>
         <div class="flex items-center gap-2 text-xs self-start lg:self-auto">
@@ -224,13 +224,14 @@
         <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
           <div class="text-slate-400">현재가 vs 내 평균매수가</div>
           <div id="posVsAvgValue" class="text-base sm:text-lg font-extrabold text-sky-300 mt-1">-</div>
-          <div id="posRow15RawEcho" class="text-[11px] text-slate-400 mt-1 truncate">15행 자동 갱신 대기 중</div>
+          <div id="posRow15RawEcho" class="text-[11px] text-slate-400 mt-1 truncate">15행 데이터 대기 중</div>
         </div>
       </div>
     </section>
 
     <!-- 4대 핵심 지표 카드 -->
     <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      <!-- 1. QQQM MDD 카드 -->
       <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between gap-2">
@@ -260,6 +261,7 @@
         </div>
       </div>
 
+      <!-- 2. VIX 변동성 지수 카드 -->
       <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between gap-2">
@@ -285,6 +287,7 @@
         </div>
       </div>
 
+      <!-- 3. CNN 공포·탐욕 지수 카드 -->
       <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between gap-2">
@@ -310,6 +313,7 @@
         </div>
       </div>
 
+      <!-- 4. 종합 추가매수 매력도 점수 카드 -->
       <div class="card p-4 sm:p-5 flex flex-col justify-between border-sky-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950/30">
         <div>
           <div class="flex items-center justify-between gap-2">
@@ -333,6 +337,7 @@
 
     <!-- 기술적 보조 지표 바: QQQM 200일 이동평균선 이격도 & RSI(14일) -->
     <section class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+      <!-- 1. QQQM 200일 이동평균선 이격도 카드 -->
       <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
           <div class="flex flex-wrap items-center justify-between gap-2">
@@ -371,6 +376,7 @@
         </div>
       </div>
 
+      <!-- 2. QQQM RSI (14일 상대강도지수) 카드 -->
       <div class="card p-4 sm:p-5 flex flex-col justify-between">
         <div>
           <div class="flex flex-wrap items-center justify-between gap-2">
@@ -415,6 +421,7 @@
 
     <!-- 중단: QQQ 장기 역사적 하락장 확률 통계 + QQQ 역사적 MDD 추이 차트 -->
     <section class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+      <!-- 좌측 7컬럼: QQQ (1999~현재) 기반 10% 조정장 / 20% 약세장 / 30% 폭락장 확률 데이터 -->
       <div class="card p-4 sm:p-6 lg:col-span-7 flex flex-col justify-between">
         <div>
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
@@ -427,7 +434,9 @@
             </span>
           </div>
 
+          <!-- 3대 하락장 확률 카드 -->
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-5">
+            <!-- 10% 조정장 -->
             <div id="regimeCard10" class="p-4 rounded-xl bg-slate-900/80 border border-amber-500/30 transition-all">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-amber-400">10% 조정장</span>
@@ -445,6 +454,7 @@
               </div>
             </div>
 
+            <!-- 20% 약세장 -->
             <div id="regimeCard20" class="p-4 rounded-xl bg-slate-900/80 border border-orange-500/30 transition-all">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-orange-400">20% 약세장</span>
@@ -462,6 +472,7 @@
               </div>
             </div>
 
+            <!-- 30% 폭락장 -->
             <div id="regimeCard30" class="p-4 rounded-xl bg-slate-900/80 border border-rose-500/30 transition-all">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-rose-400">30% 폭락장</span>
@@ -480,6 +491,7 @@
             </div>
           </div>
 
+          <!-- 조건부 심화 확률 테이블 -->
           <div class="overflow-x-auto rounded-xl border border-slate-800">
             <table class="w-full text-left text-xs min-w-[520px]">
               <thead class="bg-slate-900 text-slate-400 border-b border-slate-800">
@@ -523,6 +535,7 @@
         </p>
       </div>
 
+      <!-- 우측 5컬럼: QQQ 역사적 MDD 추이 차트 (원본 레이아웃 유지) -->
       <div class="card p-4 sm:p-6 lg:col-span-5 flex flex-col justify-between">
         <div>
           <div class="flex flex-wrap items-center justify-between gap-2">
@@ -533,6 +546,7 @@
             <span id="qqqChartStatus" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-400 border border-slate-700">1999~현재 일 단위</span>
           </div>
 
+          <!-- 기간 프리셋 버튼 & 수동 연도 범위 컨트롤 -->
           <div class="mt-3 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex flex-col gap-2">
             <div class="flex flex-wrap items-center gap-1.5">
               <button id="btnRange5y" onclick="setChartPreset('5y')" class="period-btn px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
@@ -552,6 +566,7 @@
               </button>
             </div>
 
+            <!-- 수동 연도 선택 -->
             <div class="flex items-center justify-between gap-2 text-xs pt-1 border-t border-slate-800/80">
               <span class="text-[11px] text-slate-400">연도 구간</span>
               <div class="flex items-center gap-1.5">
@@ -998,7 +1013,7 @@
       return null;
     }
 
-    // 첫 화면 진입 시 달러/원 환율 및 시트 데이터를 최우선으로 즉시 자동 갱신
+    // 첫 화면 진입 시 달러/원 환율 및 구글 시트 데이터를 최우선으로 즉시 자동 갱신
     async function autoRefreshUsdKrwAndSheetOnLoad() {
       const [fetchedUsdKrw, sheetSummary] = await Promise.all([
         fetchTwelveDataUsdKrw(),
