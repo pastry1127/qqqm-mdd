@@ -61,7 +61,7 @@
         <div class="flex flex-wrap items-center gap-2">
           <span class="px-2.5 py-1 text-[11px] sm:text-xs font-bold bg-sky-500/20 text-sky-400 rounded-md border border-sky-500/30">NASDAQ 100 · QQQM / QQQ</span>
           <span id="apiStatusBadge" class="px-2.5 py-1 text-[11px] sm:text-xs font-semibold bg-amber-500/20 text-amber-300 rounded-md border border-amber-500/30">
-            ⏳ 달러/원 API & 구글시트 자동 갱신 중...
+            ⏳ Twelve Data 달러/원 & 구글시트 자동 갱신 중...
           </span>
         </div>
         <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-white mt-2 tracking-tight leading-snug">
@@ -149,7 +149,7 @@
           </div>
         </div>
 
-        <!-- 추가매수 총 시드머니 (실시간 환율 선적용 후 저장값 복원 + 변경 시마다 저장) -->
+        <!-- 추가매수 총 시드머니 (Twelve Data 실시간 환율 선적용 후 저장값 복원 + 변경 시마다 저장) -->
         <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 sm:col-span-2 lg:col-span-1 space-y-2">
           <div class="flex items-center justify-between gap-1.5">
             <label for="seedInput" class="block text-xs text-slate-300 font-medium">대기 시드머니 ($ · ₩)</label>
@@ -166,7 +166,7 @@
             <input type="text" id="seedKrwInput" inputmode="numeric" value="1,400,000" oninput="handleSeedKrwInput()" onchange="handleSeedKrwInput()" aria-label="대기 시드머니 원화 직접 입력" class="w-full bg-transparent text-xs font-bold text-amber-300 focus:outline-none tabular-nums" />
           </div>
 
-          <p id="seedSyncHint" class="text-[11px] text-slate-500 truncate">실시간 환율 선적용 · 저장값 복원 대기중</p>
+          <p id="seedSyncHint" class="text-[11px] text-slate-500 truncate">Twelve Data 환율 선적용 · 저장값 복원 대기중</p>
         </div>
       </div>
     </section>
@@ -184,7 +184,7 @@
         </div>
         <div class="flex items-center gap-2 text-xs self-start lg:self-auto">
           <span class="px-3 py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-800">
-            실시간 달러/원: <strong id="liveUsdKrwText" class="text-sky-300">조회중...</strong>
+            실시간 달러/원 (Twelve Data): <strong id="liveUsdKrwText" class="text-sky-300">조회중...</strong>
           </span>
         </div>
       </div>
@@ -821,7 +821,7 @@
     function restoreSeedPreference() {
       const usdEl = document.getElementById('seedInput');
       const krwEl = document.getElementById('seedKrwInput');
-      const fx = Math.max(1, Number(liveUsdKrwRate) || 1400);
+      const fx = Math.max(1, Math.round(Number(liveUsdKrwRate) || 1400));
 
       try {
         const raw = localStorage.getItem(SEED_STORAGE_KEY);
@@ -854,7 +854,7 @@
       lastSeedEditSource = 'usd';
       const usdEl = document.getElementById('seedInput');
       const krwEl = document.getElementById('seedKrwInput');
-      const fx = Math.max(1, Number(liveUsdKrwRate) || 1400);
+      const fx = Math.max(1, Math.round(Number(liveUsdKrwRate) || 1400));
 
       const raw = usdEl.value.replace(/[^0-9.]/g, '');
       if (raw === '' || raw === '.') {
@@ -887,7 +887,7 @@
       lastSeedEditSource = 'krw';
       const usdEl = document.getElementById('seedInput');
       const krwEl = document.getElementById('seedKrwInput');
-      const fx = Math.max(1, Number(liveUsdKrwRate) || 1400);
+      const fx = Math.max(1, Math.round(Number(liveUsdKrwRate) || 1400));
 
       const rawDigits = krwEl.value.replace(/[^0-9]/g, '');
       if (rawDigits === '') {
@@ -911,7 +911,7 @@
     function syncSeedInputsWithRate() {
       const usdEl = document.getElementById('seedInput');
       const krwEl = document.getElementById('seedKrwInput');
-      const fx = Math.max(1, Number(liveUsdKrwRate) || 1400);
+      const fx = Math.max(1, Math.round(Number(liveUsdKrwRate) || 1400));
       const fxLabel = formatKrwRate(fx);
 
       document.getElementById('seedFxRateTag').innerText = `달러/원 ${fxLabel}원`;
@@ -1127,19 +1127,34 @@
       const fxRateUrl = `https://api.twelvedata.com/exchange_rate?symbol=USD/KRW&apikey=${TWELVE_DATA_API_KEY}`;
       const fxPriceUrl = `https://api.twelvedata.com/price?symbol=USD/KRW&apikey=${TWELVE_DATA_API_KEY}`;
 
-      try {
-        const res = await fetch(fxRateUrl, { cache: 'no-store' }).then(r => r.json());
-        const rate = parseFloat(res?.rate);
-        if (!isNaN(rate) && rate > 0) return rate;
-      } catch (_) {}
+      const extractRate = (jsonObj) => {
+        if (!jsonObj || jsonObj.status === 'error') return null;
+        const candidate = jsonObj.rate ?? jsonObj.price ?? jsonObj.exchange_rate;
+        const parsed = parseFloat(candidate);
+        return (!isNaN(parsed) && parsed > 0) ? parsed : null;
+      };
 
       try {
-        const res2 = await fetch(fxPriceUrl, { cache: 'no-store' }).then(r => r.json());
-        const priceRate = parseFloat(res2?.price);
-        if (!isNaN(priceRate) && priceRate > 0) return priceRate;
-      } catch (_) {}
+        const rateReq = fetch(fxRateUrl, { cache: 'no-store' })
+          .then(r => r.json())
+          .then(d => {
+            const val = extractRate(d);
+            if (val === null) throw new Error('no exchange_rate');
+            return val;
+          });
 
-      return null;
+        const priceReq = fetch(fxPriceUrl, { cache: 'no-store' })
+          .then(r => r.json())
+          .then(d => {
+            const val = extractRate(d);
+            if (val === null) throw new Error('no price');
+            return val;
+          });
+
+        return await Promise.any([rateReq, priceReq]);
+      } catch (_) {
+        return null;
+      }
     }
 
     function updateUsdKrwDisplay(rateVal) {
@@ -1148,34 +1163,17 @@
       document.getElementById('seedFxRateTag').innerText = `달러/원 ${formatted}원`;
     }
 
-    async function initFxFirstThenRestoreSeed() {
+    async function applyLiveUsdKrwImmediately() {
       const fetchedUsdKrw = await fetchTwelveDataUsdKrw();
       if (fetchedUsdKrw !== null && !isNaN(fetchedUsdKrw) && fetchedUsdKrw > 0) {
-        liveUsdKrwRate = parseFloat(fetchedUsdKrw.toFixed(2));
-      }
-      updateUsdKrwDisplay(liveUsdKrwRate);
-
-      restoreSeedPreference();
-      recalculateAll();
-      return fetchedUsdKrw;
-    }
-
-    async function autoRefreshUsdKrwAndSheetOnLoad() {
-      const [fetchedUsdKrw, sheetSummary] = await Promise.all([
-        fetchTwelveDataUsdKrw(),
-        fetchSheetData()
-      ]);
-
-      let changed = false;
-      if (fetchedUsdKrw !== null && !isNaN(fetchedUsdKrw) && fetchedUsdKrw > 0) {
-        liveUsdKrwRate = parseFloat(fetchedUsdKrw.toFixed(2));
+        liveUsdKrwRate = Math.round(fetchedUsdKrw);
         updateUsdKrwDisplay(liveUsdKrwRate);
-        changed = true;
-      }
-      if (sheetSummary || changed) {
+        restoreSeedPreference();
         recalculateAll();
+      } else {
+        updateUsdKrwDisplay(liveUsdKrwRate);
       }
-      return { fetchedUsdKrw, sheetSummary };
+      return fetchedUsdKrw;
     }
 
     async function fetchLiveMarketData() {
@@ -1185,7 +1183,7 @@
       const badge = document.getElementById('apiStatusBadge');
       const refreshBtn = document.getElementById('refreshBtn');
       badge.className = 'px-2.5 py-1 text-[11px] sm:text-xs font-semibold bg-amber-500/20 text-amber-300 rounded-md border border-amber-500/30';
-      badge.innerText = '⏳ 달러/원 환율 · 시트 · 실시간 시세 자동 갱신 중...';
+      badge.innerText = '⏳ Twelve Data 달러/원 · 시트 · 실시간 시세 자동 갱신 중...';
       refreshBtn.disabled = true;
       refreshBtn.classList.add('opacity-60');
 
@@ -1196,9 +1194,11 @@
         const qqqDailyRecentUrl = `https://api.twelvedata.com/time_series?symbol=QQQ&interval=1day&outputsize=5000&apikey=${TWELVE_DATA_API_KEY}`;
         const qqqDailyEarlyUrl = `https://api.twelvedata.com/time_series?symbol=QQQ&interval=1day&start_date=1999-03-10&end_date=2007-06-01&outputsize=5000&apikey=${TWELVE_DATA_API_KEY}`;
 
+        const fxFastPromise = applyLiveUsdKrwImmediately();
+
         const [quoteRes, fetchedUsdKrw, qqqmAthRes, qqqmDailyRes, qqqRecentRes, qqqEarlyRes, sheetResultText, fgResultText] = await Promise.all([
           fetch(quoteUrl, { cache: 'no-store' }).then(r => r.json()),
-          fetchTwelveDataUsdKrw(),
+          fxFastPromise,
           fetch(qqqmAthUrl, { cache: 'no-store' }).then(r => r.json()),
           fetch(qqqmDaily250Url, { cache: 'no-store' }).then(r => r.json()),
           fetch(qqqDailyRecentUrl, { cache: 'no-store' }).then(r => r.json()),
@@ -1221,7 +1221,7 @@
         }
 
         if (fetchedUsdKrw !== null && !isNaN(fetchedUsdKrw) && fetchedUsdKrw > 0) {
-          liveUsdKrwRate = parseFloat(fetchedUsdKrw.toFixed(2));
+          liveUsdKrwRate = Math.round(fetchedUsdKrw);
           updateUsdKrwDisplay(liveUsdKrwRate);
           updatedItems.push(`USD/KRW(${formatKrwRate(liveUsdKrwRate)}원)`);
         } else {
@@ -1304,7 +1304,7 @@
         document.getElementById('lastUpdatedText').innerText = `마지막 자동 동기화: ${timeStr} (${updatedItems.join(', ') || '완료'})`;
 
         badge.className = 'px-2.5 py-1 text-[11px] sm:text-xs font-bold rounded-md bg-emerald-500/20 text-emerald-400 rounded-md border border-emerald-500/30';
-        badge.innerText = '🟢 달러/원 · 시트 자동 갱신 완료';
+        badge.innerText = '🟢 Twelve Data 환율 · 시트 자동 갱신 완료';
 
       } catch (err) {
         console.error('데이터 연동 오류:', err);
@@ -1483,14 +1483,14 @@
     }
 
     function updatePositionMetrics(price) {
-      const currentFx = Number(liveUsdKrwRate) || 1400;
+      const currentFx = Math.round(Number(liveUsdKrwRate) || 1400);
       const fxFormatted = formatKrwRate(currentFx);
       document.getElementById('liveUsdKrwText').innerText = `${fxFormatted}원`;
 
       const shares = Math.max(0, parseFloat(document.getElementById('posSharesInput').value) || 0);
       const principalInput = Math.max(0, parseFloat(document.getElementById('posPrincipalInput').value) || 0);
       const avgPriceInput = Math.max(0, parseFloat(document.getElementById('posAvgPriceInput').value) || 0);
-      const buyFx = Math.max(0, parseFloat(document.getElementById('posBuyFxInput').value) || currentFx);
+      const buyFx = Math.max(0, Math.round(parseFloat(document.getElementById('posBuyFxInput').value) || currentFx));
       const annualDiv = Math.max(0, annualDividendValue || 0);
 
       const effectiveAvgPrice = avgPriceInput > 0 ? avgPriceInput : (shares > 0 && principalInput > 0 ? principalInput / shares : 0);
@@ -1500,8 +1500,8 @@
       const dollarReturnPct = effectivePrincipal > 0 ? (dollarPnl / effectivePrincipal) * 100 : 0;
 
       const effectiveBuyFx = buyFx > 0 ? buyFx : currentFx;
-      const principalKrw = effectivePrincipal * effectiveBuyFx;
-      const marketValueKrw = marketValueUsd * currentFx;
+      const principalKrw = Math.round(effectivePrincipal * effectiveBuyFx);
+      const marketValueKrw = Math.round(marketValueUsd * currentFx);
       const krwPnl = marketValueKrw - principalKrw;
       const krwReturnPct = principalKrw > 0 ? (krwPnl / principalKrw) * 100 : 0;
       const fxDeltaPct = effectiveBuyFx > 0 ? ((currentFx - effectiveBuyFx) / effectiveBuyFx) * 100 : 0;
@@ -1950,24 +1950,23 @@
       populateYearSelectors(1999, 2026);
       setChartPreset('all');
 
-      await initFxFirstThenRestoreSeed();
-      await autoRefreshUsdKrwAndSheetOnLoad();
       restoreSeedPreference();
       recalculateAll();
+      await applyLiveUsdKrwImmediately();
       fetchLiveMarketData();
     });
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && !isSyncingAll) {
         if (Date.now() - lastAutoSyncAt > 30000) {
-          autoRefreshUsdKrwAndSheetOnLoad();
+          applyLiveUsdKrwImmediately();
         }
       }
     });
 
     window.addEventListener('pageshow', (event) => {
       if (event.persisted && !isSyncingAll) {
-        autoRefreshUsdKrwAndSheetOnLoad();
+        applyLiveUsdKrwImmediately();
       }
     });
   </script>
