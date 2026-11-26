@@ -149,11 +149,24 @@
           </div>
         </div>
 
-        <!-- 추가매수 총 시드머니 -->
-        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 sm:col-span-2 lg:col-span-1">
-          <label for="seedInput" class="block text-xs text-slate-300 font-medium mb-1.5">대기 시드머니 ($)</label>
-          <input type="text" id="seedInput" inputmode="numeric" value="1,000" oninput="handleSeedInput()" class="input-box w-full px-3 py-2 rounded-lg text-base font-bold text-emerald-400" />
-          <p class="text-[11px] text-slate-500 mt-1.5">구간별 분할매수 예산</p>
+        <!-- 추가매수 총 시드머니 (달러 ↔ 원화 양방향 입력) -->
+        <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 sm:col-span-2 lg:col-span-1 space-y-2">
+          <div class="flex items-center justify-between gap-1.5">
+            <label for="seedInput" class="block text-xs text-slate-300 font-medium">대기 시드머니 ($ · ₩)</label>
+            <span id="seedFxRateTag" class="text-[10px] text-emerald-300/90 font-medium truncate">환율 1,400원</span>
+          </div>
+
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-400 pointer-events-none">$</span>
+            <input type="text" id="seedInput" inputmode="decimal" value="1,000" oninput="handleSeedUsdInput()" class="input-box w-full pl-7 pr-3 py-1.5 rounded-lg text-sm font-bold text-emerald-400 tabular-nums min-h-[38px]" />
+          </div>
+
+          <div class="flex items-center gap-1.5 bg-slate-950/75 border border-slate-800/90 px-2.5 py-1.5 rounded-lg">
+            <span class="text-[11px] font-bold text-amber-300 shrink-0">₩</span>
+            <input type="text" id="seedKrwInput" inputmode="numeric" value="1,400,000" oninput="handleSeedKrwInput()" aria-label="대기 시드머니 원화 직접 입력" class="w-full bg-transparent text-xs font-bold text-amber-300 focus:outline-none tabular-nums" />
+          </div>
+
+          <p id="seedSyncHint" class="text-[11px] text-slate-500 truncate">달러 또는 원화 직접 입력 시 즉시 환산</p>
         </div>
       </div>
     </section>
@@ -662,6 +675,7 @@
     let annualDividendValue = 0;
     let isSyncingAll = false;
     let lastAutoSyncAt = 0;
+    let lastSeedEditSource = 'usd';
 
     const fallbackQqqDailyRaw = [
       { date: '1999-03-10', high: 51.06, close: 51.06 },
@@ -779,17 +793,87 @@
       return isNaN(parsed) ? 0 : parsed;
     }
 
-    function handleSeedInput() {
-      const inputEl = document.getElementById('seedInput');
-      const rawDigits = inputEl.value.replace(/[^0-9]/g, '');
-      if (rawDigits === '') {
-        inputEl.value = '';
+    function formatUsdDisplay(num) {
+      if (!num || isNaN(num) || num <= 0) return '0';
+      const hasDecimals = Math.abs(num - Math.round(num)) >= 0.005;
+      return formatCommaNumber(num, hasDecimals ? 2 : 0);
+    }
+
+    function handleSeedUsdInput() {
+      lastSeedEditSource = 'usd';
+      const usdEl = document.getElementById('seedInput');
+      const krwEl = document.getElementById('seedKrwInput');
+      const fx = Math.max(1, Math.round(liveUsdKrwRate || 1400));
+
+      const raw = usdEl.value.replace(/[^0-9.]/g, '');
+      if (raw === '' || raw === '.') {
+        usdEl.value = raw;
+        krwEl.value = '0';
         recalculateAll();
         return;
       }
-      const numVal = parseInt(rawDigits, 10);
-      inputEl.value = formatCommaNumber(numVal, 0);
+
+      const numVal = parseFloat(raw);
+      if (isNaN(numVal)) return;
+
+      const endsWithDot = usdEl.value.trim().endsWith('.');
+      const hasDecimalPart = /\.\d+$/.test(raw);
+      if (!endsWithDot && !hasDecimalPart) {
+        usdEl.value = formatCommaNumber(numVal, 0);
+      } else if (!endsWithDot && /\.\d{1,2}$/.test(raw)) {
+        const parts = raw.split('.');
+        usdEl.value = `${formatCommaNumber(parseInt(parts[0] || '0', 10), 0)}.${parts[1]}`;
+      }
+
+      krwEl.value = formatCommaNumber(Math.round(numVal * fx), 0);
       recalculateAll();
+    }
+
+    function handleSeedKrwInput() {
+      lastSeedEditSource = 'krw';
+      const usdEl = document.getElementById('seedInput');
+      const krwEl = document.getElementById('seedKrwInput');
+      const fx = Math.max(1, Math.round(liveUsdKrwRate || 1400));
+
+      const rawDigits = krwEl.value.replace(/[^0-9]/g, '');
+      if (rawDigits === '') {
+        krwEl.value = '';
+        usdEl.value = '0';
+        recalculateAll();
+        return;
+      }
+
+      const krwVal = parseInt(rawDigits, 10);
+      if (isNaN(krwVal)) return;
+
+      krwEl.value = formatCommaNumber(krwVal, 0);
+      const usdVal = krwVal / fx;
+      usdEl.value = formatUsdDisplay(usdVal);
+      recalculateAll();
+    }
+
+    function syncSeedInputsWithRate() {
+      const usdEl = document.getElementById('seedInput');
+      const krwEl = document.getElementById('seedKrwInput');
+      const fx = Math.max(1, Math.round(liveUsdKrwRate || 1400));
+
+      document.getElementById('seedFxRateTag').innerText = `환율 ${formatCommaNumber(fx, 0)}원`;
+
+      if (lastSeedEditSource === 'krw') {
+        const krwVal = Math.max(0, parseCommaNumber(krwEl.value));
+        const usdVal = krwVal / fx;
+        usdEl.value = formatUsdDisplay(usdVal);
+        document.getElementById('seedSyncHint').innerText =
+          `원화 ₩${formatCommaNumber(krwVal, 0)} → 약 $${formatCommaNumber(usdVal, 2)} (${formatCommaNumber(fx, 0)}원/$)`;
+        return usdVal;
+      } else {
+        const usdVal = Math.max(0, parseCommaNumber(usdEl.value));
+        const krwVal = Math.round(usdVal * fx);
+        krwEl.value = formatCommaNumber(krwVal, 0);
+        document.getElementById('seedSyncHint').innerText =
+          `달러 $${formatCommaNumber(usdVal, 2)} → ₩${formatCommaNumber(krwVal, 0)} (${formatCommaNumber(fx, 0)}원/$)`;
+        return usdVal;
+      }
     }
 
     function showAlert(msg) {
@@ -1469,9 +1553,9 @@
       const price = Math.max(0.01, parseFloat(document.getElementById('priceInput').value) || 251.23);
       const vix = Math.max(5, parseFloat(document.getElementById('vixInput').value) || 22.50);
       const fg = Math.min(100, Math.max(0, parseFloat(document.getElementById('fgInput').value) || 35));
-      const seed = Math.max(0, parseCommaNumber(document.getElementById('seedInput').value));
 
       const posInfo = updatePositionMetrics(price);
+      const seed = syncSeedInputsWithRate();
       updateTechnicalIndicators(price, ath);
 
       document.getElementById('regimeTarget10').innerText = `$${formatCommaNumber(ath * 0.90, 2)}`;
