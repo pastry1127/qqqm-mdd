@@ -149,11 +149,11 @@
           </div>
         </div>
 
-        <!-- 추가매수 총 시드머니 (달러 ↔ 원화 실시간 반영 + 변경 시마다 저장) -->
+        <!-- 추가매수 총 시드머니 (실시간 환율 선적용 후 저장값 복원 + 변경 시마다 저장) -->
         <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 sm:col-span-2 lg:col-span-1 space-y-2">
           <div class="flex items-center justify-between gap-1.5">
             <label for="seedInput" class="block text-xs text-slate-300 font-medium">대기 시드머니 ($ · ₩)</label>
-            <span id="seedFxRateTag" class="text-[10px] text-emerald-300/90 font-medium truncate">달러/원 1,400원</span>
+            <span id="seedFxRateTag" class="text-[10px] text-emerald-300/90 font-medium truncate">달러/원 조회중...</span>
           </div>
 
           <div class="relative">
@@ -166,7 +166,7 @@
             <input type="text" id="seedKrwInput" inputmode="numeric" value="1,400,000" oninput="handleSeedKrwInput()" onchange="handleSeedKrwInput()" aria-label="대기 시드머니 원화 직접 입력" class="w-full bg-transparent text-xs font-bold text-amber-300 focus:outline-none tabular-nums" />
           </div>
 
-          <p id="seedSyncHint" class="text-[11px] text-slate-500 truncate">변경 시 자동 저장 · 달러/원 실시간 반영</p>
+          <p id="seedSyncHint" class="text-[11px] text-slate-500 truncate">실시간 환율 선적용 · 저장값 복원 대기중</p>
         </div>
       </div>
     </section>
@@ -184,7 +184,7 @@
         </div>
         <div class="flex items-center gap-2 text-xs self-start lg:self-auto">
           <span class="px-3 py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-800">
-            실시간 달러/원: <strong id="liveUsdKrwText" class="text-sky-300">1,400원</strong>
+            실시간 달러/원: <strong id="liveUsdKrwText" class="text-sky-300">조회중...</strong>
           </span>
         </div>
       </div>
@@ -786,6 +786,12 @@
       });
     }
 
+    function formatKrwRate(rateVal) {
+      const n = Number(rateVal);
+      if (isNaN(n) || n <= 0) return '1,400';
+      return formatCommaNumber(Math.round(n), 0);
+    }
+
     function parseCommaNumber(val) {
       if (typeof val === 'number') return val;
       if (!val) return 0;
@@ -906,7 +912,7 @@
       const usdEl = document.getElementById('seedInput');
       const krwEl = document.getElementById('seedKrwInput');
       const fx = Math.max(1, Number(liveUsdKrwRate) || 1400);
-      const fxLabel = formatCommaNumber(fx, fx % 1 === 0 ? 0 : 2);
+      const fxLabel = formatKrwRate(fx);
 
       document.getElementById('seedFxRateTag').innerText = `달러/원 ${fxLabel}원`;
 
@@ -1137,8 +1143,21 @@
     }
 
     function updateUsdKrwDisplay(rateVal) {
-      const formatted = formatCommaNumber(rateVal, rateVal % 1 === 0 ? 0 : 2);
+      const formatted = formatKrwRate(rateVal);
       document.getElementById('liveUsdKrwText').innerText = `${formatted}원`;
+      document.getElementById('seedFxRateTag').innerText = `달러/원 ${formatted}원`;
+    }
+
+    async function initFxFirstThenRestoreSeed() {
+      const fetchedUsdKrw = await fetchTwelveDataUsdKrw();
+      if (fetchedUsdKrw !== null && !isNaN(fetchedUsdKrw) && fetchedUsdKrw > 0) {
+        liveUsdKrwRate = parseFloat(fetchedUsdKrw.toFixed(2));
+      }
+      updateUsdKrwDisplay(liveUsdKrwRate);
+
+      restoreSeedPreference();
+      recalculateAll();
+      return fetchedUsdKrw;
     }
 
     async function autoRefreshUsdKrwAndSheetOnLoad() {
@@ -1204,7 +1223,7 @@
         if (fetchedUsdKrw !== null && !isNaN(fetchedUsdKrw) && fetchedUsdKrw > 0) {
           liveUsdKrwRate = parseFloat(fetchedUsdKrw.toFixed(2));
           updateUsdKrwDisplay(liveUsdKrwRate);
-          updatedItems.push(`USD/KRW(${formatCommaNumber(liveUsdKrwRate, liveUsdKrwRate % 1 === 0 ? 0 : 2)}원)`);
+          updatedItems.push(`USD/KRW(${formatKrwRate(liveUsdKrwRate)}원)`);
         } else {
           updateUsdKrwDisplay(liveUsdKrwRate);
         }
@@ -1465,7 +1484,7 @@
 
     function updatePositionMetrics(price) {
       const currentFx = Number(liveUsdKrwRate) || 1400;
-      const fxFormatted = formatCommaNumber(currentFx, currentFx % 1 === 0 ? 0 : 2);
+      const fxFormatted = formatKrwRate(currentFx);
       document.getElementById('liveUsdKrwText').innerText = `${fxFormatted}원`;
 
       const shares = Math.max(0, parseFloat(document.getElementById('posSharesInput').value) || 0);
@@ -1504,7 +1523,7 @@
       kPnlEl.innerText = `${krwPnl >= 0 ? '+' : '-'}₩${formatCommaNumber(Math.abs(krwPnl), 0)} (${krwReturnPct >= 0 ? '+' : ''}${krwReturnPct.toFixed(2)}%)`;
       kPnlEl.className = `text-base sm:text-lg font-extrabold mt-1 ${krwPnl > 0 ? 'text-emerald-400' : krwPnl < 0 ? 'text-rose-400' : 'text-slate-200'}`;
       document.getElementById('posFxDiffText').innerText =
-        `매입 ${formatCommaNumber(Math.round(effectiveBuyFx), 0)}원 → 현재 ${fxFormatted}원 (${fxDeltaPct >= 0 ? '+' : ''}${fxDeltaPct.toFixed(2)}%)`;
+        `매입 ${formatKrwRate(effectiveBuyFx)}원 → 현재 ${fxFormatted}원 (${fxDeltaPct >= 0 ? '+' : ''}${fxDeltaPct.toFixed(2)}%)`;
 
       document.getElementById('posYocValue').innerText = `${yocPct.toFixed(2)}%`;
       document.getElementById('posDivReinvestText').innerText =
@@ -1925,15 +1944,16 @@
       });
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       initQqqMddChart();
       fullQqqRawSeries = [...fallbackQqqDailyRaw];
       populateYearSelectors(1999, 2026);
       setChartPreset('all');
 
+      await initFxFirstThenRestoreSeed();
+      await autoRefreshUsdKrwAndSheetOnLoad();
       restoreSeedPreference();
       recalculateAll();
-      autoRefreshUsdKrwAndSheetOnLoad();
       fetchLiveMarketData();
     });
 
