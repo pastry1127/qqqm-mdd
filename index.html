@@ -149,7 +149,7 @@
           </div>
         </div>
 
-        <!-- 추가매수 총 시드머니 (달러 ↔ 원화 양방향 입력) -->
+        <!-- 추가매수 총 시드머니 (달러 ↔ 원화 양방향 입력 + 이전 값 기억) -->
         <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 sm:col-span-2 lg:col-span-1 space-y-2">
           <div class="flex items-center justify-between gap-1.5">
             <label for="seedInput" class="block text-xs text-slate-300 font-medium">대기 시드머니 ($ · ₩)</label>
@@ -166,7 +166,7 @@
             <input type="text" id="seedKrwInput" inputmode="numeric" value="1,400,000" oninput="handleSeedKrwInput()" aria-label="대기 시드머니 원화 직접 입력" class="w-full bg-transparent text-xs font-bold text-amber-300 focus:outline-none tabular-nums" />
           </div>
 
-          <p id="seedSyncHint" class="text-[11px] text-slate-500 truncate">달러 또는 원화 직접 입력 시 즉시 환산</p>
+          <p id="seedSyncHint" class="text-[11px] text-slate-500 truncate">이전 입력값 자동 저장 · 즉시 환산</p>
         </div>
       </div>
     </section>
@@ -652,6 +652,7 @@
     const TWELVE_DATA_API_KEY = '2dc4a4e26ecd432491177ee79b25a84a';
     const GOOGLE_SHEET_VIX_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTsfWHfBBs2owjyhb8FWBRAN3wMN_93WAulOu6mJpDrPubgAakHFJzGS7nTkbi-JmMMbxlycIeQUbFf/pub?gid=1655940963&single=true&output=csv';
     const CNN_FEAR_GREED_URL = 'https://production.dataviz.cnn.io/index/fearandgreed/graphdata';
+    const SEED_STORAGE_KEY = 'qqqm_mdd_saved_seed_v1';
 
     const dcaTiers = [
       { name: '1차 (조정 진입)', drop: 0.10, weight: 0.10 },
@@ -799,6 +800,50 @@
       return formatCommaNumber(num, hasDecimals ? 2 : 0);
     }
 
+    function saveSeedPreference(usdVal, krwVal, source) {
+      try {
+        const payload = {
+          usd: Math.max(0, Number(usdVal) || 0),
+          krw: Math.max(0, Math.round(Number(krwVal) || 0)),
+          source: source === 'krw' ? 'krw' : 'usd',
+          updatedAt: Date.now()
+        };
+        localStorage.setItem(SEED_STORAGE_KEY, JSON.stringify(payload));
+      } catch (_) {}
+    }
+
+    function restoreSeedPreference() {
+      const usdEl = document.getElementById('seedInput');
+      const krwEl = document.getElementById('seedKrwInput');
+      const fx = Math.max(1, Math.round(liveUsdKrwRate || 1400));
+
+      try {
+        const raw = localStorage.getItem(SEED_STORAGE_KEY);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return false;
+
+        if (parsed.source === 'krw' && typeof parsed.krw === 'number' && !isNaN(parsed.krw) && parsed.krw >= 0) {
+          lastSeedEditSource = 'krw';
+          const krwRounded = Math.round(parsed.krw);
+          const usdCalc = krwRounded / fx;
+          krwEl.value = formatCommaNumber(krwRounded, 0);
+          usdEl.value = formatUsdDisplay(usdCalc);
+          return true;
+        }
+
+        if (typeof parsed.usd === 'number' && !isNaN(parsed.usd) && parsed.usd >= 0) {
+          lastSeedEditSource = 'usd';
+          const usdRounded = Math.round(parsed.usd * 100) / 100;
+          const krwCalc = Math.round(usdRounded * fx);
+          usdEl.value = formatUsdDisplay(usdRounded);
+          krwEl.value = formatCommaNumber(krwCalc, 0);
+          return true;
+        }
+      } catch (_) {}
+      return false;
+    }
+
     function handleSeedUsdInput() {
       lastSeedEditSource = 'usd';
       const usdEl = document.getElementById('seedInput');
@@ -809,6 +854,7 @@
       if (raw === '' || raw === '.') {
         usdEl.value = raw;
         krwEl.value = '0';
+        saveSeedPreference(0, 0, 'usd');
         recalculateAll();
         return;
       }
@@ -825,7 +871,9 @@
         usdEl.value = `${formatCommaNumber(parseInt(parts[0] || '0', 10), 0)}.${parts[1]}`;
       }
 
-      krwEl.value = formatCommaNumber(Math.round(numVal * fx), 0);
+      const krwVal = Math.round(numVal * fx);
+      krwEl.value = formatCommaNumber(krwVal, 0);
+      saveSeedPreference(numVal, krwVal, 'usd');
       recalculateAll();
     }
 
@@ -839,6 +887,7 @@
       if (rawDigits === '') {
         krwEl.value = '';
         usdEl.value = '0';
+        saveSeedPreference(0, 0, 'krw');
         recalculateAll();
         return;
       }
@@ -849,6 +898,7 @@
       krwEl.value = formatCommaNumber(krwVal, 0);
       const usdVal = krwVal / fx;
       usdEl.value = formatUsdDisplay(usdVal);
+      saveSeedPreference(usdVal, krwVal, 'krw');
       recalculateAll();
     }
 
@@ -860,18 +910,20 @@
       document.getElementById('seedFxRateTag').innerText = `환율 ${formatCommaNumber(fx, 0)}원`;
 
       if (lastSeedEditSource === 'krw') {
-        const krwVal = Math.max(0, parseCommaNumber(krwEl.value));
+        const krwVal = Math.max(0, Math.round(parseCommaNumber(krwEl.value)));
         const usdVal = krwVal / fx;
         usdEl.value = formatUsdDisplay(usdVal);
         document.getElementById('seedSyncHint').innerText =
-          `원화 ₩${formatCommaNumber(krwVal, 0)} → 약 $${formatCommaNumber(usdVal, 2)} (${formatCommaNumber(fx, 0)}원/$)`;
+          `원화 ₩${formatCommaNumber(krwVal, 0)} → 약 $${formatCommaNumber(usdVal, 2)} (자동 저장됨)`;
+        saveSeedPreference(usdVal, krwVal, 'krw');
         return usdVal;
       } else {
         const usdVal = Math.max(0, parseCommaNumber(usdEl.value));
         const krwVal = Math.round(usdVal * fx);
         krwEl.value = formatCommaNumber(krwVal, 0);
         document.getElementById('seedSyncHint').innerText =
-          `달러 $${formatCommaNumber(usdVal, 2)} → ₩${formatCommaNumber(krwVal, 0)} (${formatCommaNumber(fx, 0)}원/$)`;
+          `달러 $${formatCommaNumber(usdVal, 2)} → ₩${formatCommaNumber(krwVal, 0)} (자동 저장됨)`;
+        saveSeedPreference(usdVal, krwVal, 'usd');
         return usdVal;
       }
     }
@@ -1872,6 +1924,7 @@
       populateYearSelectors(1999, 2026);
       setChartPreset('all');
 
+      restoreSeedPreference();
       recalculateAll();
       autoRefreshUsdKrwAndSheetOnLoad();
       fetchLiveMarketData();
