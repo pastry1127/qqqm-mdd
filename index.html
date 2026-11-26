@@ -149,24 +149,24 @@
           </div>
         </div>
 
-        <!-- 추가매수 총 시드머니 (달러 ↔ 원화 양방향 입력 + 이전 값 기억) -->
+        <!-- 추가매수 총 시드머니 (달러 ↔ 원화 실시간 반영 + 변경 시마다 저장) -->
         <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 sm:col-span-2 lg:col-span-1 space-y-2">
           <div class="flex items-center justify-between gap-1.5">
             <label for="seedInput" class="block text-xs text-slate-300 font-medium">대기 시드머니 ($ · ₩)</label>
-            <span id="seedFxRateTag" class="text-[10px] text-emerald-300/90 font-medium truncate">환율 1,400원</span>
+            <span id="seedFxRateTag" class="text-[10px] text-emerald-300/90 font-medium truncate">달러/원 1,400원</span>
           </div>
 
           <div class="relative">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-400 pointer-events-none">$</span>
-            <input type="text" id="seedInput" inputmode="decimal" value="1,000" oninput="handleSeedUsdInput()" class="input-box w-full pl-7 pr-3 py-1.5 rounded-lg text-sm font-bold text-emerald-400 tabular-nums min-h-[38px]" />
+            <input type="text" id="seedInput" inputmode="decimal" value="1,000" oninput="handleSeedUsdInput()" onchange="handleSeedUsdInput()" class="input-box w-full pl-7 pr-3 py-1.5 rounded-lg text-sm font-bold text-emerald-400 tabular-nums min-h-[38px]" />
           </div>
 
           <div class="flex items-center gap-1.5 bg-slate-950/75 border border-slate-800/90 px-2.5 py-1.5 rounded-lg">
             <span class="text-[11px] font-bold text-amber-300 shrink-0">₩</span>
-            <input type="text" id="seedKrwInput" inputmode="numeric" value="1,400,000" oninput="handleSeedKrwInput()" aria-label="대기 시드머니 원화 직접 입력" class="w-full bg-transparent text-xs font-bold text-amber-300 focus:outline-none tabular-nums" />
+            <input type="text" id="seedKrwInput" inputmode="numeric" value="1,400,000" oninput="handleSeedKrwInput()" onchange="handleSeedKrwInput()" aria-label="대기 시드머니 원화 직접 입력" class="w-full bg-transparent text-xs font-bold text-amber-300 focus:outline-none tabular-nums" />
           </div>
 
-          <p id="seedSyncHint" class="text-[11px] text-slate-500 truncate">이전 입력값 자동 저장 · 즉시 환산</p>
+          <p id="seedSyncHint" class="text-[11px] text-slate-500 truncate">변경 시 자동 저장 · 달러/원 실시간 반영</p>
         </div>
       </div>
     </section>
@@ -184,7 +184,7 @@
         </div>
         <div class="flex items-center gap-2 text-xs self-start lg:self-auto">
           <span class="px-3 py-1.5 rounded-lg bg-slate-900 text-slate-300 border border-slate-800">
-            현재 달러/원: <strong id="liveUsdKrwText" class="text-sky-300">1,400원</strong>
+            실시간 달러/원: <strong id="liveUsdKrwText" class="text-sky-300">1,400원</strong>
           </span>
         </div>
       </div>
@@ -538,7 +538,7 @@
         </p>
       </div>
 
-      <!-- 우측 5컬럼: QQQ 역사적 MDD 추이 차트 (원본 레이아웃 100% 유지) -->
+      <!-- 우측 5컬럼: QQQ 역사적 MDD 추이 차트 -->
       <div class="card p-4 sm:p-6 lg:col-span-5 flex flex-col justify-between">
         <div>
           <div class="flex flex-wrap items-center justify-between gap-2">
@@ -599,7 +599,7 @@
       </div>
     </section>
 
-    <!-- 하단: QQQM MDD 구간별 분할매수 실행 테이블 (행 높이 상향 · 모든 셀 한 줄 고정) -->
+    <!-- 하단: QQQM MDD 구간별 분할매수 실행 테이블 -->
     <section class="card p-4 sm:p-6">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
         <div>
@@ -815,7 +815,7 @@
     function restoreSeedPreference() {
       const usdEl = document.getElementById('seedInput');
       const krwEl = document.getElementById('seedKrwInput');
-      const fx = Math.max(1, Math.round(liveUsdKrwRate || 1400));
+      const fx = Math.max(1, Number(liveUsdKrwRate) || 1400);
 
       try {
         const raw = localStorage.getItem(SEED_STORAGE_KEY);
@@ -848,7 +848,7 @@
       lastSeedEditSource = 'usd';
       const usdEl = document.getElementById('seedInput');
       const krwEl = document.getElementById('seedKrwInput');
-      const fx = Math.max(1, Math.round(liveUsdKrwRate || 1400));
+      const fx = Math.max(1, Number(liveUsdKrwRate) || 1400);
 
       const raw = usdEl.value.replace(/[^0-9.]/g, '');
       if (raw === '' || raw === '.') {
@@ -881,7 +881,7 @@
       lastSeedEditSource = 'krw';
       const usdEl = document.getElementById('seedInput');
       const krwEl = document.getElementById('seedKrwInput');
-      const fx = Math.max(1, Math.round(liveUsdKrwRate || 1400));
+      const fx = Math.max(1, Number(liveUsdKrwRate) || 1400);
 
       const rawDigits = krwEl.value.replace(/[^0-9]/g, '');
       if (rawDigits === '') {
@@ -905,16 +905,17 @@
     function syncSeedInputsWithRate() {
       const usdEl = document.getElementById('seedInput');
       const krwEl = document.getElementById('seedKrwInput');
-      const fx = Math.max(1, Math.round(liveUsdKrwRate || 1400));
+      const fx = Math.max(1, Number(liveUsdKrwRate) || 1400);
+      const fxLabel = formatCommaNumber(fx, fx % 1 === 0 ? 0 : 2);
 
-      document.getElementById('seedFxRateTag').innerText = `환율 ${formatCommaNumber(fx, 0)}원`;
+      document.getElementById('seedFxRateTag').innerText = `달러/원 ${fxLabel}원`;
 
       if (lastSeedEditSource === 'krw') {
         const krwVal = Math.max(0, Math.round(parseCommaNumber(krwEl.value)));
         const usdVal = krwVal / fx;
         usdEl.value = formatUsdDisplay(usdVal);
         document.getElementById('seedSyncHint').innerText =
-          `원화 ₩${formatCommaNumber(krwVal, 0)} → 약 $${formatCommaNumber(usdVal, 2)} (자동 저장됨)`;
+          `저장됨 · ₩${formatCommaNumber(krwVal, 0)} = $${formatCommaNumber(usdVal, 2)}`;
         saveSeedPreference(usdVal, krwVal, 'krw');
         return usdVal;
       } else {
@@ -922,7 +923,7 @@
         const krwVal = Math.round(usdVal * fx);
         krwEl.value = formatCommaNumber(krwVal, 0);
         document.getElementById('seedSyncHint').innerText =
-          `달러 $${formatCommaNumber(usdVal, 2)} → ₩${formatCommaNumber(krwVal, 0)} (자동 저장됨)`;
+          `저장됨 · $${formatCommaNumber(usdVal, 2)} = ₩${formatCommaNumber(krwVal, 0)}`;
         saveSeedPreference(usdVal, krwVal, 'usd');
         return usdVal;
       }
@@ -1135,6 +1136,11 @@
       return null;
     }
 
+    function updateUsdKrwDisplay(rateVal) {
+      const formatted = formatCommaNumber(rateVal, rateVal % 1 === 0 ? 0 : 2);
+      document.getElementById('liveUsdKrwText').innerText = `${formatted}원`;
+    }
+
     async function autoRefreshUsdKrwAndSheetOnLoad() {
       const [fetchedUsdKrw, sheetSummary] = await Promise.all([
         fetchTwelveDataUsdKrw(),
@@ -1143,8 +1149,8 @@
 
       let changed = false;
       if (fetchedUsdKrw !== null && !isNaN(fetchedUsdKrw) && fetchedUsdKrw > 0) {
-        liveUsdKrwRate = Math.round(fetchedUsdKrw);
-        document.getElementById('liveUsdKrwText').innerText = `${formatCommaNumber(liveUsdKrwRate, 0)}원`;
+        liveUsdKrwRate = parseFloat(fetchedUsdKrw.toFixed(2));
+        updateUsdKrwDisplay(liveUsdKrwRate);
         changed = true;
       }
       if (sheetSummary || changed) {
@@ -1196,11 +1202,11 @@
         }
 
         if (fetchedUsdKrw !== null && !isNaN(fetchedUsdKrw) && fetchedUsdKrw > 0) {
-          liveUsdKrwRate = Math.round(fetchedUsdKrw);
-          document.getElementById('liveUsdKrwText').innerText = `${formatCommaNumber(liveUsdKrwRate, 0)}원`;
-          updatedItems.push(`USD/KRW(${formatCommaNumber(liveUsdKrwRate, 0)}원)`);
+          liveUsdKrwRate = parseFloat(fetchedUsdKrw.toFixed(2));
+          updateUsdKrwDisplay(liveUsdKrwRate);
+          updatedItems.push(`USD/KRW(${formatCommaNumber(liveUsdKrwRate, liveUsdKrwRate % 1 === 0 ? 0 : 2)}원)`);
         } else {
-          document.getElementById('liveUsdKrwText').innerText = `${formatCommaNumber(liveUsdKrwRate, 0)}원`;
+          updateUsdKrwDisplay(liveUsdKrwRate);
         }
 
         if (qqqmAthRes && Array.isArray(qqqmAthRes.values) && qqqmAthRes.values.length > 0) {
@@ -1458,8 +1464,9 @@
     }
 
     function updatePositionMetrics(price) {
-      const currentFx = Math.round(liveUsdKrwRate || 1400);
-      document.getElementById('liveUsdKrwText').innerText = `${formatCommaNumber(currentFx, 0)}원`;
+      const currentFx = Number(liveUsdKrwRate) || 1400;
+      const fxFormatted = formatCommaNumber(currentFx, currentFx % 1 === 0 ? 0 : 2);
+      document.getElementById('liveUsdKrwText').innerText = `${fxFormatted}원`;
 
       const shares = Math.max(0, parseFloat(document.getElementById('posSharesInput').value) || 0);
       const principalInput = Math.max(0, parseFloat(document.getElementById('posPrincipalInput').value) || 0);
@@ -1497,7 +1504,7 @@
       kPnlEl.innerText = `${krwPnl >= 0 ? '+' : '-'}₩${formatCommaNumber(Math.abs(krwPnl), 0)} (${krwReturnPct >= 0 ? '+' : ''}${krwReturnPct.toFixed(2)}%)`;
       kPnlEl.className = `text-base sm:text-lg font-extrabold mt-1 ${krwPnl > 0 ? 'text-emerald-400' : krwPnl < 0 ? 'text-rose-400' : 'text-slate-200'}`;
       document.getElementById('posFxDiffText').innerText =
-        `매입 ${formatCommaNumber(Math.round(effectiveBuyFx), 0)}원 → 현재 ${formatCommaNumber(currentFx, 0)}원 (${fxDeltaPct >= 0 ? '+' : ''}${fxDeltaPct.toFixed(2)}%)`;
+        `매입 ${formatCommaNumber(Math.round(effectiveBuyFx), 0)}원 → 현재 ${fxFormatted}원 (${fxDeltaPct >= 0 ? '+' : ''}${fxDeltaPct.toFixed(2)}%)`;
 
       document.getElementById('posYocValue').innerText = `${yocPct.toFixed(2)}%`;
       document.getElementById('posDivReinvestText').innerText =
