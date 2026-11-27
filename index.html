@@ -554,10 +554,10 @@
               <button id="btnRange5y" onclick="setChartPreset('5y')" class="period-btn px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
                 5년
               </button>
-              <button id="btnRange10y" onclick="setChartPreset('10y')" class="period-btn px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
+              <button id="btnRange10y" onclick="setChartPreset('10y')" class="period-btn period-btn-active px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
                 10년
               </button>
-              <button id="btnRangeAll" onclick="setChartPreset('all')" class="period-btn period-btn-active px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
+              <button id="btnRangeAll" onclick="setChartPreset('all')" class="period-btn px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">
                 상장일~현재
               </button>
               <button id="btnDailyDetail" onclick="toggleDailyDetailMode()" class="px-2.5 py-1.5 text-[11px] font-bold rounded-lg bg-teal-950/60 text-teal-300 border border-teal-500/40 hover:bg-teal-900/60 transition">
@@ -1290,7 +1290,7 @@
           const firstYear = parseInt(fullQqqRawSeries[0].date.slice(0, 4), 10);
           const lastYear = parseInt(fullQqqRawSeries[fullQqqRawSeries.length - 1].date.slice(0, 4), 10);
           populateYearSelectors(firstYear, lastYear);
-          setChartPreset('all');
+          setChartPreset('10y');
           document.getElementById('qqqChartStatus').innerText = `QQQ 일 단위 (${fullQqqRawSeries.length.toLocaleString()}일)`;
           updatedItems.push(`QQQ 일봉(${fullQqqRawSeries.length.toLocaleString()}거래일)`);
         }
@@ -1948,7 +1948,7 @@
       initQqqMddChart();
       fullQqqRawSeries = [...fallbackQqqDailyRaw];
       populateYearSelectors(1999, 2026);
-      setChartPreset('all');
+      setChartPreset('10y');
 
       restoreSeedPreference();
       recalculateAll();
